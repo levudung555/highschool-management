@@ -1,28 +1,65 @@
 
+# ===============================
 # Maven
+# ===============================
 target/
 pom.xml.tag
 pom.xml.releaseBackup
 pom.xml.versionsBackup
 pom.xml.next
 release.properties
+.mvn/wrapper/maven-wrapper.jar
 
+# Allow target folders inside source directories
+!**/src/main/**/target/
+!**/src/test/**/target/
+
+# ===============================
 # IntelliJ IDEA
+# ===============================
 .idea/
 *.iml
+*.iws
+*.ipr
 out/
 
-# Eclipse
+# ===============================
+# Eclipse / STS
+# ===============================
 .classpath
 .project
 .settings/
+.factorypath
+.apt_generated/
+.springBeans
+.sts4-cache/
 
-# VS Code
+# ===============================
+# NetBeans
+# ===============================
+/nbproject/private/
+/nbbuild/
+/dist/
+/nbdist/
+/.nb-gradle/
+build/
+
+# Allow build folders inside source directories
+!**/src/main/**/build/
+!**/src/test/**/build/
+
+# ===============================
+# Visual Studio Code
+# ===============================
 .vscode/
 
+# ===============================
 # Logs
+# ===============================
 *.log
 
-# OS
+# ===============================
+# Operating System
+# ===============================
 .DS_Store
 Thumbs.db
