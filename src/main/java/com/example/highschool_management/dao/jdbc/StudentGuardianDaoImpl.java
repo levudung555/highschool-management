@@ -19,7 +19,7 @@ public class StudentGuardianDaoImpl implements StudentGuardianDao {
     @Override
     public boolean link(StudentGuardian studentGuardian) {
         String sql = """
-            INSERT INTO HS_NGUOI_GIAM_HO (MaHS, MaNGH, MoiQuanHe, LienHeChinh)
+            INSERT INTO hs_nguoi_giam_ho (MaHS, MaNGH, MoiQuanHe, LienHeChinh)
             VALUES (?, ?, ?, ?)
             ON DUPLICATE KEY UPDATE MoiQuanHe = VALUES(MoiQuanHe), LienHeChinh = VALUES(LienHeChinh)
             """;
@@ -37,7 +37,7 @@ public class StudentGuardianDaoImpl implements StudentGuardianDao {
 
     @Override
     public boolean unlink(Long maHS, Long maNGH) {
-        String sql = "DELETE FROM HS_NGUOI_GIAM_HO WHERE MaHS = ? AND MaNGH = ?";
+        String sql = "DELETE FROM hs_nguoi_giam_ho WHERE MaHS = ? AND MaNGH = ?";
         try (Connection conn = JdbcConnect.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql)) {
             ps.setLong(1, maHS);
@@ -50,7 +50,7 @@ public class StudentGuardianDaoImpl implements StudentGuardianDao {
 
     @Override
     public boolean existsByMaHSAndMaNGH(Long maHS, Long maNGH) {
-        String sql = "SELECT EXISTS(SELECT 1 FROM HS_NGUOI_GIAM_HO WHERE MaHS = ? AND MaNGH = ?)";
+        String sql = "SELECT EXISTS(SELECT 1 FROM hs_nguoi_giam_ho WHERE MaHS = ? AND MaNGH = ?)";
         try (Connection conn = JdbcConnect.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql)) {
             ps.setLong(1, maHS);
@@ -71,8 +71,8 @@ public class StudentGuardianDaoImpl implements StudentGuardianDao {
         String sql = """
             SELECT g.MaNGH, g.HoTen, g.SoDienThoai, g.Email, g.DiaChi,
                    sg.MoiQuanHe, sg.LienHeChinh
-            FROM NGUOI_GIAM_HO g
-            INNER JOIN HS_NGUOI_GIAM_HO sg ON g.MaNGH = sg.MaNGH
+            FROM nguoi_giam_ho g
+            INNER JOIN hs_nguoi_giam_ho sg ON g.MaNGH = sg.MaNGH
             WHERE sg.MaHS = ?
             ORDER BY sg.LienHeChinh DESC, g.MaNGH ASC
             """;

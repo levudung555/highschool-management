@@ -20,7 +20,7 @@ public class TeacherDaoImpl implements TeacherDao {
   public Teacher insertTeacher(Teacher teacher) {
     String sql =
         """
-        INSERT INTO GIAO_VIEN (MaSoGV, HoTen, NgaySinh, SoDienThoai, Email, ChuyenMon, TrangThai)
+        INSERT INTO giao_vien (MaSoGV, HoTen, NgaySinh, SoDienThoai, Email, ChuyenMon, TrangThai)
         VALUES (?, ?, ?, ?, ?, ?, ?)
         """;
     try (Connection conn = JdbcConnect.getConnection();
@@ -48,7 +48,7 @@ public class TeacherDaoImpl implements TeacherDao {
   public boolean updateTeacher(Teacher teacher) {
     String sql =
         """
-        UPDATE GIAO_VIEN
+        UPDATE giao_vien
         SET HoTen = ?, NgaySinh = ?, SoDienThoai = ?, Email = ?, ChuyenMon = ?, TrangThai = ?
         WHERE MaGV = ?
         """;
@@ -69,7 +69,7 @@ public class TeacherDaoImpl implements TeacherDao {
 
   @Override
   public boolean existsSoDienThoai(String soDienThoai) {
-    String sql = "SELECT EXISTS(SELECT 1 FROM GIAO_VIEN WHERE SoDienThoai = ?)";
+    String sql = "SELECT EXISTS(SELECT 1 FROM giao_vien WHERE SoDienThoai = ?)";
     try (Connection conn = JdbcConnect.getConnection();
         PreparedStatement ps = conn.prepareStatement(sql)) {
       ps.setString(1, soDienThoai);
@@ -86,7 +86,7 @@ public class TeacherDaoImpl implements TeacherDao {
 
   @Override
   public boolean existsEmail(String email) {
-    String sql = "SELECT EXISTS(SELECT 1 FROM GIAO_VIEN WHERE Email = ?)";
+    String sql = "SELECT EXISTS(SELECT 1 FROM giao_vien WHERE Email = ?)";
     try (Connection conn = JdbcConnect.getConnection();
         PreparedStatement ps = conn.prepareStatement(sql)) {
       ps.setString(1, email);
@@ -106,7 +106,7 @@ public class TeacherDaoImpl implements TeacherDao {
     String sql =
         """
         SELECT MaSoGV
-        FROM GIAO_VIEN
+        FROM giao_vien
         WHERE REGEXP_LIKE(MaSoGV, '^GV[0-9]+$', 'c')
         ORDER BY CAST(SUBSTRING(MaSoGV, 3) AS DECIMAL(30, 0)) DESC
         LIMIT 1
@@ -125,7 +125,7 @@ public class TeacherDaoImpl implements TeacherDao {
 
   @Override
   public Optional<Teacher> findByMaGV(Long maGV) {
-    String sql = "SELECT * FROM GIAO_VIEN WHERE MaGV = ?";
+    String sql = "SELECT * FROM giao_vien WHERE MaGV = ?";
     try (Connection conn = JdbcConnect.getConnection();
         PreparedStatement ps = conn.prepareStatement(sql)) {
       ps.setLong(1, maGV);
@@ -188,7 +188,7 @@ public class TeacherDaoImpl implements TeacherDao {
 
   @Override
   public List<Teacher> findAll() {
-    String sql = "SELECT * FROM GIAO_VIEN ORDER BY MaGV DESC";
+    String sql = "SELECT * FROM giao_vien ORDER BY MaGV DESC";
     List<Teacher> list = new ArrayList<>();
     try (Connection conn = JdbcConnect.getConnection();
         PreparedStatement ps = conn.prepareStatement(sql);

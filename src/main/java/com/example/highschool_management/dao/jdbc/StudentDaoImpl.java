@@ -20,7 +20,7 @@ public class StudentDaoImpl implements StudentDao {
   @Override
   public Student insertStudent(Student student) {
     String sql =
-        "INSERT INTO HOC_SINH (MaSoHS, HoTen, NgaySinh, GioiTinh, DiaChi, SoDienThoai, Email,"
+        "INSERT INTO hoc_sinh (MaSoHS, HoTen, NgaySinh, GioiTinh, DiaChi, SoDienThoai, Email,"
             + " NgayTiepNhan) VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
     try (Connection conn = JdbcConnect.getConnection();
         PreparedStatement ps = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
@@ -46,7 +46,7 @@ public class StudentDaoImpl implements StudentDao {
 
   @Override
   public boolean existsSoDienThoai(String soDienThoai) {
-    String sql = "SELECT EXISTS(SELECT 1 FROM HOC_SINH WHERE SoDienThoai = ?)";
+    String sql = "SELECT EXISTS(SELECT 1 FROM hoc_sinh WHERE SoDienThoai = ?)";
     try (Connection conn = JdbcConnect.getConnection();
         PreparedStatement ps = conn.prepareStatement(sql)) {
       ps.setString(1, soDienThoai);
@@ -64,7 +64,7 @@ public class StudentDaoImpl implements StudentDao {
 
   @Override
   public boolean existsEmail(String email) {
-    String sql = "SELECT EXISTS(SELECT 1 FROM HOC_SINH WHERE Email = ?)";
+    String sql = "SELECT EXISTS(SELECT 1 FROM hoc_sinh WHERE Email = ?)";
     try (Connection conn = JdbcConnect.getConnection();
         PreparedStatement ps = conn.prepareStatement(sql)) {
       ps.setString(1, email);
@@ -85,7 +85,7 @@ public class StudentDaoImpl implements StudentDao {
     String sql =
         """
         SELECT MaSoHS
-        FROM HOC_SINH
+        FROM hoc_sinh
         WHERE REGEXP_LIKE(MaSoHS, '^HS[0-9]+$', 'c')
         ORDER BY CAST(SUBSTRING(MaSoHS, 3) AS DECIMAL(30, 0)) DESC
         LIMIT 1
@@ -108,7 +108,7 @@ public class StudentDaoImpl implements StudentDao {
 
   @Override
   public Optional<Student> findByMaHS(Long maHS) {
-    String sql = "SELECT * FROM HOC_SINH WHERE MaHS = ?";
+    String sql = "SELECT * FROM hoc_sinh WHERE MaHS = ?";
     try (Connection conn = JdbcConnect.getConnection();
         PreparedStatement ps = conn.prepareStatement(sql)) {
       ps.setLong(1, maHS);
@@ -132,13 +132,13 @@ public class StudentDaoImpl implements StudentDao {
     } catch (Exception e) {
       throw new RuntimeException("Lỗi khi lấy mã học sinh", e);
     }
-    return null;
+    return Optional.empty();
   }
 
   @Override
   public List<Student> searchStudents(
       String maSoHS, String hoTen, Long maLop, Long maKhoi, Long maNamHoc) {
-    StringBuilder sql = new StringBuilder("SELECT * FROM HOC_SINH WHERE 1=1");
+    StringBuilder sql = new StringBuilder("SELECT * FROM hoc_sinh WHERE 1=1");
     List<Object> params = new ArrayList<>();
     if (maSoHS != null && !maSoHS.trim().isEmpty()) {
       sql.append(" AND MaSoHS = ?");
@@ -151,7 +151,7 @@ public class StudentDaoImpl implements StudentDao {
     if (maLop != null || maKhoi != null || maNamHoc != null) {
       sql.append(
           " AND EXISTS (SELECT 1 FROM xep_lop x JOIN lop_hoc l ON l.MaLop=x.MaLop WHERE"
-              + " x.MaHS=HOC_SINH.MaHS AND x.TrangThaiDuyet='DA_DUYET' AND x.TuNgay<=CURRENT_DATE"
+              + " x.MaHS=hoc_sinh.MaHS AND x.TrangThaiDuyet='DA_DUYET' AND x.TuNgay<=CURRENT_DATE"
               + " AND (x.DenNgay IS NULL OR x.DenNgay>CURRENT_DATE)");
       if (maLop != null) {
         sql.append(" AND l.MaLop=?");
@@ -197,7 +197,7 @@ public class StudentDaoImpl implements StudentDao {
 
   @Override
   public List<Student> findAll() {
-    String sql = "SELECT * FROM HOC_SINH ORDER BY MaHS DESC";
+    String sql = "SELECT * FROM hoc_sinh ORDER BY MaHS DESC";
     List<Student> result = new ArrayList<>();
     try (Connection conn = JdbcConnect.getConnection();
         PreparedStatement ps = conn.prepareStatement(sql);
@@ -224,7 +224,7 @@ public class StudentDaoImpl implements StudentDao {
   @Override
   public List<Long> findExistingIds(List<Long> maHS) {
     String sql =
-        "SELECT MaHS FROM HOC_SINH WHERE MaHS IN ("
+        "SELECT MaHS FROM hoc_sinh WHERE MaHS IN ("
             + String.join(",", Collections.nCopies(maHS.size(), "?"))
             + ")";
 
@@ -254,7 +254,7 @@ public class StudentDaoImpl implements StudentDao {
   public boolean deleteStudents(List<Long> maHS) {
 
     String sql =
-        "DELETE FROM HOC_SINH WHERE MaHS IN ("
+        "DELETE FROM hoc_sinh WHERE MaHS IN ("
             + String.join(",", Collections.nCopies(maHS.size(), "?"))
             + ")";
 
