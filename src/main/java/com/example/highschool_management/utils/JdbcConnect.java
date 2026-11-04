@@ -14,32 +14,17 @@ public class JdbcConnect {
     private static String username;
     private static String password;
 
-    @Value("${spring.datasource.url}")
-    public void setUrl(String url) {
+    public JdbcConnect(
+            @Value("${spring.datasource.url}") String url,
+            @Value("${spring.datasource.username}") String username,
+            @Value("${spring.datasource.password}") String password
+    ) {
         JdbcConnect.url = url;
-    }
-
-    @Value("${spring.datasource.username}")
-    public void setUsername(String username) {
         JdbcConnect.username = username;
-    }
-
-    @Value("${spring.datasource.password}")
-    public void setPassword(String password) {
         JdbcConnect.password = password;
     }
 
     public static Connection getConnection() throws SQLException {
         return DriverManager.getConnection(url, username, password);
-    }
-
-    public static void closeConnection(Connection connection) {
-        if (connection != null) {
-            try {
-                connection.close();
-            } catch (SQLException e) {
-                e.printStackTrace();
-            }
-        }
     }
 }
