@@ -4,3 +4,10 @@ spring:
     username: ${DB_USERNAME:root}
     password: ${DB_PASSWORD:}
     driver-class-name: com.mysql.cj.jdbc.Driver
+
+jwt:
+  signerKey: ${JWT_SIGNER_KEY:1234567890123456789012345678901234567890123456789012345678901234}
+  issuer: ${JWT_ISSUER:school-management}
+  valid-duration: ${JWT_VALID_DURATION:3600}
+  refreshable-duration: ${JWT_REFRESHABLE_DURATION:7200}
+

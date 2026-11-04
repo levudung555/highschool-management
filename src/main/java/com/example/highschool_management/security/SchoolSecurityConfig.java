@@ -1,152 +1,139 @@
 package com.example.highschool_management.security;
 
-import com.example.highschool_management.dao.AuthDao;
 import com.example.highschool_management.dto.response.ApiError;
-import java.security.SecureRandom;
-import java.time.*;
-import java.util.*;
-import javax.crypto.SecretKey;
-import javax.crypto.spec.SecretKeySpec;
+import com.nimbusds.jose.JWSAlgorithm;
+import com.nimbusds.jose.jwk.JWK;
+import com.nimbusds.jose.jwk.JWKSet;
+import com.nimbusds.jose.jwk.OctetSequenceKey;
+import com.nimbusds.jose.jwk.source.ImmutableJWKSet;
+import com.nimbusds.jose.jwk.source.JWKSource;
+import com.nimbusds.jose.proc.SecurityContext;
+import java.nio.charset.StandardCharsets;
+import java.util.Set;
+import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.context.annotation.*;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
+import org.springframework.security.config.Customizer;
+import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
-import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
-import org.springframework.security.oauth2.core.*;
-import org.springframework.security.oauth2.jose.jws.MacAlgorithm;
-import org.springframework.security.oauth2.jwt.*;
+import org.springframework.security.oauth2.jwt.JwtEncoder;
+import org.springframework.security.oauth2.jwt.NimbusJwtEncoder;
 import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationConverter;
+import org.springframework.security.oauth2.server.resource.authentication.JwtGrantedAuthoritiesConverter;
 import org.springframework.security.web.SecurityFilterChain;
 import tools.jackson.databind.ObjectMapper;
 
 @Configuration
+@EnableMethodSecurity
+@RequiredArgsConstructor
 public class SchoolSecurityConfig {
   public static final String ISSUER = "school-management";
   public static final String AUDIENCE = "school-web";
   public static final Set<String> ROLES = Set.of("ADMIN", "BGH", "GIAO_VU", "GIAO_VIEN");
 
-  @Bean
-  PasswordEncoder passwordEncoder() {
-    return new BCryptPasswordEncoder();
-  }
+  private static final String[] PUBLIC_POST_URLS = {
+    "/api/v1/auth/login",
+    "/api/v1/auth/token",
+    "/api/v1/auth/introspect",
+    "/api/v1/auth/logout",
+    "/api/v1/auth/refresh",
+    "/auth/token",
+    "/auth/introspect",
+    "/auth/logout",
+    "/auth/refresh"
+  };
+
+  private static final String[] PUBLIC_GET_URLS = {
+    "/api/v1/auth/options",
+    "/",
+    "/index.html",
+    "/login.html",
+    "/*.html",
+    "/*.css",
+    "/*.js",
+    "/*.ico",
+    "/css/**",
+    "/js/**",
+    "/vendor/**",
+    "/error"
+  };
+
+  private final CustomJwtDecoder customJwtDecoder;
 
   @Bean
-  SecretKey jwtKey(@Value("${JWT_SECRET_BASE64:}") String configured) {
-    byte[] bytes;
-    if (configured.isBlank()) {
-      bytes = new byte[32];
-      new SecureRandom().nextBytes(bytes);
-    } else {
-      try {
-        bytes = Base64.getDecoder().decode(configured);
-      } catch (IllegalArgumentException e) {
-        throw new IllegalArgumentException("JWT_SECRET_BASE64 phải là Base64 hợp lệ");
-      }
-    }
-    if (bytes.length < 32)
-      throw new IllegalArgumentException("JWT_SECRET_BASE64 cần ít nhất 32 byte sau giải mã");
-    return new SecretKeySpec(bytes, "HmacSHA256");
-  }
+  public SecurityFilterChain securityFilterChain(HttpSecurity httpSecurity) throws Exception {
+    ObjectMapper objectMapper = new ObjectMapper();
 
-  @Bean
-  JwtEncoder jwtEncoder(SecretKey key) {
-    return NimbusJwtEncoder.withSecretKey(key).build();
-  }
-
-  @Bean
-  JwtDecoder jwtDecoder(SecretKey key, Clock clock, AuthDao dao) {
-    var decoder = NimbusJwtDecoder.withSecretKey(key).macAlgorithm(MacAlgorithm.HS256).build();
-    var timestamp = new JwtTimestampValidator(Duration.ofSeconds(30));
-    timestamp.setClock(clock);
-    OAuth2TokenValidator<Jwt> claims =
-        jwt -> {
-          if (jwt.getExpiresAt() == null
-              || jwt.getSubject() == null
-              || jwt.getAudience() == null
-              || !jwt.getAudience().contains(AUDIENCE)) return invalid();
-          try {
-            long id = Long.parseLong(jwt.getSubject());
-            Number version = jwt.getClaim("ver");
-            var user = dao.timTheoMa(id).orElse(null);
-            if (user == null
-                || !"HOAT_DONG".equals(user.trangThai())
-                || version == null
-                || version.longValue() != user.tokenVersion()) return invalid();
-            return OAuth2TokenValidatorResult.success();
-          } catch (NumberFormatException | ClassCastException e) {
-            return invalid();
-          }
-        };
-    decoder.setJwtValidator(
-        new DelegatingOAuth2TokenValidator<>(timestamp, new JwtIssuerValidator(ISSUER), claims));
-    return decoder;
-  }
-
-  private static OAuth2TokenValidatorResult invalid() {
-    return OAuth2TokenValidatorResult.failure(
-        new OAuth2Error("invalid_token", "Phiên đăng nhập không hợp lệ", null));
-  }
-
-  @Bean
-  SecurityFilterChain schoolSecurity(HttpSecurity http, AuthDao dao, ObjectMapper json)
-      throws Exception {
-    var converter = new JwtAuthenticationConverter();
-    // JWT sub is immutable MaTK. Roles are read from MySQL for every request, never trusted from
-    // client.
-    converter.setJwtGrantedAuthoritiesConverter(
-        jwt ->
-            dao.vaiTro(Long.parseLong(jwt.getSubject())).stream()
-                .filter(ROLES::contains)
-                .map(
-                    role ->
-                        (org.springframework.security.core.GrantedAuthority)
-                            new SimpleGrantedAuthority("ROLE_" + role))
-                .toList());
-    http.sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-        .csrf(c -> c.disable()) // Only Authorization: Bearer tokens; no authentication cookie.
+    httpSecurity
+        .sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+        .csrf(csrf -> csrf.disable())
+        .cors(Customizer.withDefaults())
         .authorizeHttpRequests(
-            a ->
-                a.requestMatchers("/api/v1/auth/login", "/api/v1/auth/options")
+            request ->
+                request
+                    .requestMatchers(HttpMethod.POST, PUBLIC_POST_URLS)
+                    .permitAll()
+                    .requestMatchers(HttpMethod.GET, PUBLIC_GET_URLS)
                     .permitAll()
                     .requestMatchers("/api/**", "/student/**", "/teacher/**", "/guardian/**")
                     .authenticated()
                     .anyRequest()
                     .permitAll())
         .oauth2ResourceServer(
-            o ->
-                o.jwt(j -> j.jwtAuthenticationConverter(converter))
-                    .authenticationEntryPoint(
-                        (req, res, e) -> {
-                          res.setStatus(401);
-                          res.setContentType("application/json;charset=UTF-8");
-                          json.writeValue(
-                              res.getWriter(),
-                              new ApiError(
-                                  401,
-                                  "Phiên đăng nhập đã hết hạn hoặc không hợp lệ",
-                                  req.getRequestURI()));
-                        }))
+            oauth2 ->
+                oauth2
+                    .jwt(
+                        jwt ->
+                            jwt.decoder(customJwtDecoder)
+                                .jwtAuthenticationConverter(jwtAuthenticationConverter()))
+                    .authenticationEntryPoint(new JwtAuthenticationEntryPoint()))
         .exceptionHandling(
-            e ->
-                e.authenticationEntryPoint(
-                        (req, res, x) -> {
-                          res.setStatus(401);
-                          res.setContentType("application/json;charset=UTF-8");
-                          json.writeValue(
-                              res.getWriter(),
-                              new ApiError(401, "Cần đăng nhập", req.getRequestURI()));
-                        })
+            exceptions ->
+                exceptions
+                    .authenticationEntryPoint(new JwtAuthenticationEntryPoint())
                     .accessDeniedHandler(
-                        (req, res, x) -> {
+                        (req, res, accessDeniedException) -> {
                           res.setStatus(403);
                           res.setContentType("application/json;charset=UTF-8");
-                          json.writeValue(
+                          objectMapper.writeValue(
                               res.getWriter(),
                               new ApiError(
                                   403, "Không có quyền thực hiện thao tác", req.getRequestURI()));
                         }));
-    return http.build();
+
+    return httpSecurity.build();
+  }
+
+  @Bean
+  public JwtAuthenticationConverter jwtAuthenticationConverter() {
+    JwtGrantedAuthoritiesConverter jwtGrantedAuthoritiesConverter =
+        new JwtGrantedAuthoritiesConverter();
+    jwtGrantedAuthoritiesConverter.setAuthorityPrefix("");
+    JwtAuthenticationConverter jwtAuthenticationConverter = new JwtAuthenticationConverter();
+    jwtAuthenticationConverter.setJwtGrantedAuthoritiesConverter(jwtGrantedAuthoritiesConverter);
+    return jwtAuthenticationConverter;
+  }
+
+  @Bean
+  public PasswordEncoder passwordEncoder() {
+    return new BCryptPasswordEncoder();
+  }
+
+  @Bean
+  public JwtEncoder jwtEncoder(
+      @Value(
+              "${jwt.signerKey:${jwt.signer-key:1234567890123456789012345678901234567890123456789012345678901234}}")
+          String signerKey) {
+    JWK jwk =
+        new OctetSequenceKey.Builder(signerKey.getBytes(StandardCharsets.UTF_8))
+            .algorithm(JWSAlgorithm.HS512)
+            .build();
+    JWKSource<SecurityContext> jwkSource = new ImmutableJWKSet<>(new JWKSet(jwk));
+    return new NimbusJwtEncoder(jwkSource);
   }
 }

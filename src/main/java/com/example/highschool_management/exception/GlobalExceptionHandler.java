@@ -68,6 +68,13 @@ public class GlobalExceptionHandler {
     return taoPhanHoi(HttpStatus.valueOf(exception.getStatus()), exception.getMessage(), request);
   }
 
+  @ExceptionHandler(AppException.class)
+  public ResponseEntity<ApiError> xuLyAppException(
+      AppException exception, HttpServletRequest request) {
+    return taoPhanHoi(
+        exception.getErrorCode().getStatus(), exception.getErrorCode().getMessage(), request);
+  }
+
   @ExceptionHandler(jakarta.validation.ConstraintViolationException.class)
   public ResponseEntity<ApiError> xuLyRangBuocDauVao(
       jakarta.validation.ConstraintViolationException exception, HttpServletRequest request) {

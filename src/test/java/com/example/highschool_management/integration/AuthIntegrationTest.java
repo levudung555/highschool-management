@@ -83,15 +83,26 @@ class AuthIntegrationTest {
   }
 
   @Test
-  void logoutRevokesAllExistingTokens() throws Exception {
-    String first = login("bgh"), second = login("bgh");
-    mvc.perform(post("/api/v1/auth/logout").header("Authorization", "Bearer " + first))
+  void logoutRevokesToken() throws Exception {
+    String token = login("bgh");
+    mvc.perform(post("/api/v1/auth/logout").header("Authorization", "Bearer " + token))
         .andExpect(status().isNoContent());
-    for (String token : List.of(first, second))
-      mvc.perform(get("/api/v1/auth/me").header("Authorization", "Bearer " + token))
-          .andExpect(status().isUnauthorized());
+    mvc.perform(get("/api/v1/auth/me").header("Authorization", "Bearer " + token))
+        .andExpect(status().isUnauthorized());
     mvc.perform(get("/api/v1/auth/me").header("Authorization", "Bearer " + login("bgh")))
         .andExpect(status().isOk());
+  }
+
+  @Test
+  void arenaEduTokenEndpointReturnsStandardResponse() throws Exception {
+    mvc.perform(
+            post("/auth/token")
+                .contentType("application/json")
+                .content("{\"username\":\"bgh\",\"password\":\"Test@12345\"}"))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.code").value(1000))
+        .andExpect(jsonPath("$.result.token").isNotEmpty())
+        .andExpect(jsonPath("$.result.authenticated").value(true));
   }
 
   @Test
@@ -119,12 +130,66 @@ class AuthIntegrationTest {
               .build();
       String token =
           encoder
-              .encode(JwtEncoderParameters.from(JwsHeader.with(MacAlgorithm.HS256).build(), claims))
+              .encode(JwtEncoderParameters.from(JwsHeader.with(MacAlgorithm.HS512).build(), claims))
               .getTokenValue();
       mvc.perform(get("/api/v1/auth/me").header("Authorization", "Bearer " + token))
           .andExpect(status().isUnauthorized());
     }
     mvc.perform(get("/api/v1/auth/me").header("Authorization", "Bearer broken.jwt.token"))
+        .andExpect(status().isUnauthorized());
+  }
+
+  @Test
+  void introspectValidAndInvalidToken() throws Exception {
+    String token = login("bgh");
+    mvc.perform(
+            post("/api/v1/auth/introspect")
+                .contentType("application/json")
+                .content("{\"token\":\"" + token + "\"}"))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.valid").value(true));
+
+    mvc.perform(
+            post("/api/v1/auth/introspect")
+                .contentType("application/json")
+                .content("{\"token\":\"broken.jwt.token\"}"))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.valid").value(false));
+
+    mvc.perform(post("/api/v1/auth/logout").header("Authorization", "Bearer " + token))
+        .andExpect(status().isNoContent());
+
+    mvc.perform(
+            post("/api/v1/auth/introspect")
+                .contentType("application/json")
+                .content("{\"token\":\"" + token + "\"}"))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.valid").value(false));
+  }
+
+  @Test
+  void refreshTokenSuccessAndRevokesOldToken() throws Exception {
+    String token1 = login("bgh");
+    var refreshResult =
+        mvc.perform(
+                post("/api/v1/auth/refresh")
+                    .contentType("application/json")
+                    .content("{\"token\":\"" + token1 + "\"}"))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.accessToken").isNotEmpty())
+            .andExpect(jsonPath("$.tokenType").value("Bearer"))
+            .andReturn();
+
+    String token2 =
+        com.jayway.jsonpath.JsonPath.read(
+            refreshResult.getResponse().getContentAsString(), "$.accessToken");
+    assertNotEquals(token1, token2);
+
+    mvc.perform(get("/api/v1/auth/me").header("Authorization", "Bearer " + token2))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.maTaiKhoan").value(1));
+
+    mvc.perform(get("/api/v1/auth/me").header("Authorization", "Bearer " + token1))
         .andExpect(status().isUnauthorized());
   }
 }
