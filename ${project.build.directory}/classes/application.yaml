@@ -1,0 +1,12 @@
+spring:
+  application:
+    name: highschool-management
+
+  datasource:
+    url: jdbc:mysql://${MYSQL_HOST:localhost}:3306/highschool_management
+    username: root
+    password: 123456
+    driver-class-name: com.mysql.cj.jdbc.Driver
+
+server:
+  port: 8080

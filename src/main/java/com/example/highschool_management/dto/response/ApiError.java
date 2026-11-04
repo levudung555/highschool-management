@@ -1,4 +1,8 @@
 package com.example.highschool_management.dto.response;
 
-public class ApiError {
+public record ApiError(
+        int status,
+        String message,
+        String path
+) {
 }
