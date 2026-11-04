@@ -110,7 +110,7 @@ public class SchoolSecurityConfig {
             a ->
                 a.requestMatchers("/api/v1/auth/login", "/api/v1/auth/options")
                     .permitAll()
-                    .requestMatchers("/api/**")
+                    .requestMatchers("/api/**", "/student/**", "/teacher/**", "/guardian/**")
                     .authenticated()
                     .anyRequest()
                     .permitAll())

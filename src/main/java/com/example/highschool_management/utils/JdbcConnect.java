@@ -1,30 +1,20 @@
 package com.example.highschool_management.utils;
 
-import org.springframework.beans.factory.annotation.Value;
+import java.sql.*;
+import javax.sql.DataSource;
+import org.springframework.jdbc.datasource.TransactionAwareDataSourceProxy;
 import org.springframework.stereotype.Component;
 
-import java.sql.Connection;
-import java.sql.DriverManager;
-import java.sql.SQLException;
-
+/** Các DAO JDBC dùng chung DataSource và transaction Spring. */
 @Component
 public class JdbcConnect {
+  private static DataSource source;
 
-    private static String url;
-    private static String username;
-    private static String password;
+  public JdbcConnect(DataSource dataSource) {
+    source = new TransactionAwareDataSourceProxy(dataSource);
+  }
 
-    public JdbcConnect(
-            @Value("${spring.datasource.url}") String url,
-            @Value("${spring.datasource.username}") String username,
-            @Value("${spring.datasource.password}") String password
-    ) {
-        JdbcConnect.url = url;
-        JdbcConnect.username = username;
-        JdbcConnect.password = password;
-    }
-
-    public static Connection getConnection() throws SQLException {
-        return DriverManager.getConnection(url, username, password);
-    }
+  public static Connection getConnection() throws SQLException {
+    return source.getConnection();
+  }
 }

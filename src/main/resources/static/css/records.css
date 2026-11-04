@@ -1,0 +1,195 @@
+/* 1. Trang chủ và dashboard: nhấn mạnh công việc cần thực hiện. */
+.home-layout {
+  display: grid;
+  grid-template-columns: 1.4fr 1fr;
+  gap: 24px;
+  margin-top: 24px;
+}
+.home-work,
+.home-guide {
+  padding: 28px;
+}
+.home-work h2,
+.home-guide h2 {
+  font-size: 21px;
+  margin: 12px 0 22px;
+}
+.home-stat {
+  color: inherit;
+  position: relative;
+  transition:
+    border-color 0.2s,
+    transform 0.2s;
+}
+.home-stat:hover {
+  border-color: #137b71;
+  transform: translateY(-2px);
+}
+.home-stat-index {
+  font-size: 12px;
+  color: #137b71;
+  background: #e8f4ef;
+  border-radius: 12px;
+  padding: 13px;
+}
+.work-link {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 22px 0;
+  color: #24413e;
+  border-bottom: 1px solid #e8eeed;
+}
+.work-link:last-child {
+  border: 0;
+}
+.work-link:hover strong {
+  color: #137b71;
+}
+.work-link > span:last-child {
+  margin-left: auto;
+}
+.work-link small {
+  display: block;
+  color: #7e9390;
+  line-height: 1.7;
+  margin-top: 5px;
+  font-size: 12px;
+}
+.work-number {
+  font-size: 12px;
+  padding: 12px;
+  background: #edf5f2;
+  color: #137b71;
+  border-radius: 10px;
+}
+.home-guide {
+  background: #edf5f2;
+  border-color: #deebe4;
+}
+.home-guide ol {
+  padding-left: 22px;
+}
+.home-guide li {
+  padding: 9px 0 15px 8px;
+}
+.home-guide li p {
+  font-size: 13px;
+  color: #728780;
+  line-height: 1.8;
+  margin-top: 8px;
+}
+
+/* 2. Bộ lọc hồ sơ: nhãn luôn hiển thị, không phụ thuộc placeholder. */
+.profile-filters {
+  align-items: end;
+  flex-wrap: wrap;
+  gap: 14px;
+}
+.profile-filters > div {
+  flex: 1 1 145px;
+}
+.profile-filters .profile-search {
+  flex: 2 1 220px;
+}
+.profile-filters .form-label {
+  display: block;
+  font-size: 12px;
+  color: #637c78;
+}
+.profile-filters input,
+.profile-filters select {
+  min-height: 43px;
+}
+.profile-filters > button {
+  min-height: 43px;
+}
+.filter-help {
+  margin: 0;
+  padding: 0 24px 18px;
+  color: #7c908c;
+  font-size: 12px;
+}
+.profile-feedback:not(:empty) {
+  padding: 20px 24px;
+  background: #f6f9f8;
+}
+.app-table .row-actions {
+  flex-wrap: wrap;
+}
+.profile-filters + .table-responsive {
+  border-top: 1px solid #e4eeeb;
+}
+
+/* 3. Chi tiết hồ sơ và thông tin gia đình. */
+.guardian-heading {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 15px;
+  margin: 28px 0 18px;
+}
+.guardian-heading h3 {
+  font-size: 18px;
+  margin: 0;
+}
+.guardian-list article {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 16px;
+  margin-bottom: 10px;
+  border: 1px solid #dfebe6;
+  border-radius: 10px;
+  background: #f5f9f7;
+}
+.guardian-list p {
+  font-size: 12px;
+  color: #6a8179;
+  margin: 8px 0 0;
+}
+.guardian-link-form {
+  margin-top: 24px;
+  padding-top: 22px;
+  border-top: 1px solid #e1eae6;
+}
+.guardian-link-form h4 {
+  font-size: 16px;
+}
+#profile-fields .form-control,
+#profile-fields .form-select {
+  min-height: 44px;
+}
+
+/* 4. Responsive: điều khiển đủ rộng trên điện thoại. */
+@media (max-width: 1100px) {
+  .home-layout {
+    grid-template-columns: 1fr;
+  }
+}
+@media (max-width: 767px) {
+  .home-work,
+  .home-guide {
+    padding: 20px;
+  }
+  .home-stat {
+    min-width: 0;
+  }
+  .profile-filters > div {
+    flex-basis: 100%;
+  }
+  .profile-filters > button {
+    flex: 1;
+  }
+  .guardian-heading {
+    align-items: start;
+    flex-direction: column;
+  }
+  .guardian-list article {
+    align-items: start;
+  }
+  .work-link {
+    gap: 12px;
+  }
+}

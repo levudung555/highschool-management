@@ -1,27 +1,22 @@
 package com.example.highschool_management.dto.response;
 
 import com.example.highschool_management.enums.SexEnum;
+import java.time.LocalDate;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
-
-import java.time.LocalDate;
 
 @Getter
 @Setter
 @NoArgsConstructor
 public class StudentResponse {
-    Long maHS;
-    String MaSoHS;
-    String HoTen;
-    LocalDate ngaySinh;
-    SexEnum gioiTinh;
-    String diaChi;
-    String sdt;
-    String Email;
-    LocalDate ngayTiepNhan;
-
-
-
-
+  Long maHS;
+  String maSoHS;
+  String hoTen;
+  LocalDate ngaySinh;
+  SexEnum gioiTinh;
+  String diaChi;
+  String sdt;
+  String email;
+  LocalDate ngayTiepNhan;
 }

@@ -1,3 +1,126 @@
-<!doctype html><html lang="vi"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="#137b71"><title>Đăng nhập · Schoolspace</title><link rel="stylesheet" href="/vendor/bootstrap/bootstrap.min.css"><link rel="stylesheet" href="/css/school.css"><link rel="stylesheet" href="/css/login.css"></head>
-<body class="login-page"><main class="login-shell"><section class="login-story" aria-label="Schoolspace"><a class="login-brand" href="/login.html"><span class="login-logo"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="m3 10 9-7 9 7v10H3zM9 20v-7h6v7"/></svg></span>schoolspace</a><div class="story-copy"><span class="story-eyebrow">KHÔNG GIAN HỌC VỤ</span><h1>Mỗi lớp học,<br>một hành trình.</h1><p>Kết nối hồ sơ, tổ chức lớp học và đồng hành cùng học sinh qua từng năm học.</p><div class="story-features"><span>✓ Quản lý lớp tập trung</span><span>✓ Xếp lớp & phê duyệt</span><span>✓ Theo dõi lịch sử học sinh</span></div></div><div class="story-art" aria-hidden="true"><div class="art-orbit orbit-one"></div><div class="art-orbit orbit-two"></div><div class="art-card art-card-one"><span>10A1</span><i></i><i></i><i></i></div><div class="art-card art-card-two"><span>11A2</span><i></i><i></i><i></i></div><div class="art-dot"></div></div><p class="story-footer">Schoolspace · Hệ thống quản lý học sinh THPT</p></section>
-<section class="login-form-panel"><div class="login-form-wrap"><span class="eyebrow">CHÀO MỪNG TRỞ LẠI</span><h2>Đăng nhập</h2><p class="login-lead">Sử dụng tài khoản nhà trường để vào không gian làm việc của bạn.</p><form id="loginForm"><div id="loginError" class="alert alert-danger d-none" role="alert"></div><label class="form-label" for="username">Tên đăng nhập</label><input id="username" class="form-control" name="username" autocomplete="username" maxlength="100" placeholder="Nhập tên đăng nhập" required autofocus><label class="form-label mt-4" for="password">Mật khẩu</label><div class="password-field"><input id="password" class="form-control" name="password" type="password" autocomplete="current-password" maxlength="72" placeholder="Nhập mật khẩu" required><button id="togglePassword" class="password-toggle" type="button" aria-label="Hiện mật khẩu" aria-pressed="false">Hiện</button></div><button type="submit" class="btn btn-primary w-100 login-submit" id="loginSubmit">Đăng nhập <span aria-hidden="true">→</span></button></form><div class="login-note"><svg viewBox="0 0 24 24" class="icon"><path d="m12 3 8 3v6c0 5-8 9-8 9s-8-4-8-9V6zM8 12l3 3 5-6"/></svg><span>Chức năng được hiển thị theo vai trò của tài khoản.</span></div><details id="localAccounts" class="local-accounts" hidden><summary>Tài khoản dùng thử trên localhost</summary><div><p><strong>Giáo vụ:</strong> <code>uc09_local_giaovu</code></p><p><strong>Ban Giám hiệu:</strong> <code>uc09_local_bgh</code></p><p class="mb-0">Mật khẩu demo: <code>Test@12345</code></p></div></details><p class="login-help">Nếu chưa có tài khoản, liên hệ quản trị viên nhà trường.</p></div><footer>Quản lý rõ ràng. Đồng hành dài lâu.</footer></section></main><script type="module" src="/js/login.js"></script></body></html>
+<!doctype html>
+<html lang="vi">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <meta name="theme-color" content="#137b71" />
+    <title>Đăng nhập · Schoolspace</title>
+    <link rel="stylesheet" href="/vendor/bootstrap/bootstrap.min.css" />
+    <link rel="stylesheet" href="/css/school.css" />
+    <link rel="stylesheet" href="/css/login.css" />
+  </head>
+  <body class="login-page">
+    <main class="login-shell">
+      <section class="login-story" aria-label="Schoolspace">
+        <a class="login-brand" href="/login.html"
+          ><span class="login-logo"
+            ><svg
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="1.7"
+            >
+              <path d="m3 10 9-7 9 7v10H3zM9 20v-7h6v7" /></svg></span
+          >schoolspace</a
+        >
+        <div class="story-copy">
+          <span class="story-eyebrow">KHÔNG GIAN HỌC VỤ</span>
+          <h1>Mỗi lớp học,<br />một hành trình.</h1>
+          <p>
+            Kết nối hồ sơ, tổ chức lớp học và đồng hành cùng học sinh qua từng
+            năm học.
+          </p>
+          <div class="story-features">
+            <span>✓ Quản lý lớp tập trung</span
+            ><span>✓ Xếp lớp & phê duyệt</span
+            ><span>✓ Theo dõi lịch sử học sinh</span>
+          </div>
+        </div>
+        <div class="story-art" aria-hidden="true">
+          <div class="art-orbit orbit-one"></div>
+          <div class="art-orbit orbit-two"></div>
+          <div class="art-card art-card-one">
+            <span>10A1</span><i></i><i></i><i></i>
+          </div>
+          <div class="art-card art-card-two">
+            <span>11A2</span><i></i><i></i><i></i>
+          </div>
+          <div class="art-dot"></div>
+        </div>
+        <p class="story-footer">Schoolspace · Hệ thống quản lý học sinh THPT</p>
+      </section>
+      <section class="login-form-panel">
+        <div class="login-form-wrap">
+          <span class="eyebrow">CHÀO MỪNG TRỞ LẠI</span>
+          <h2>Đăng nhập</h2>
+          <p class="login-lead">
+            Sử dụng tài khoản nhà trường để vào không gian làm việc của bạn.
+          </p>
+          <form id="loginForm">
+            <div
+              id="loginError"
+              class="alert alert-danger d-none"
+              role="alert"
+            ></div>
+            <label class="form-label" for="username">Tên đăng nhập</label
+            ><input
+              id="username"
+              class="form-control"
+              name="username"
+              autocomplete="username"
+              maxlength="100"
+              placeholder="Nhập tên đăng nhập"
+              required
+              autofocus
+            /><label class="form-label mt-4" for="password">Mật khẩu</label>
+            <div class="password-field">
+              <input
+                id="password"
+                class="form-control"
+                name="password"
+                type="password"
+                autocomplete="current-password"
+                maxlength="72"
+                placeholder="Nhập mật khẩu"
+                required
+              /><button
+                id="togglePassword"
+                class="password-toggle"
+                type="button"
+                aria-label="Hiện mật khẩu"
+                aria-pressed="false"
+              >
+                Hiện
+              </button>
+            </div>
+            <button
+              type="submit"
+              class="btn btn-primary w-100 login-submit"
+              id="loginSubmit"
+            >
+              Đăng nhập <span aria-hidden="true">→</span>
+            </button>
+          </form>
+          <div class="login-note">
+            <svg viewBox="0 0 24 24" class="icon">
+              <path d="m12 3 8 3v6c0 5-8 9-8 9s-8-4-8-9V6zM8 12l3 3 5-6" /></svg
+            ><span>Chức năng được hiển thị theo vai trò của tài khoản.</span>
+          </div>
+          <details id="localAccounts" class="local-accounts" hidden>
+            <summary>Tài khoản dùng thử trên localhost</summary>
+            <div>
+              <p><strong>Giáo vụ:</strong> <code>uc09_local_giaovu</code></p>
+              <p><strong>Ban Giám hiệu:</strong> <code>uc09_local_bgh</code></p>
+              <p class="mb-0">Mật khẩu demo: <code>Test@12345</code></p>
+            </div>
+          </details>
+          <p class="login-help">
+            Nếu chưa có tài khoản, liên hệ quản trị viên nhà trường.
+          </p>
+        </div>
+        <footer>Quản lý rõ ràng. Đồng hành dài lâu.</footer>
+      </section>
+    </main>
+    <script type="module" src="/js/login.js"></script>
+  </body>
+</html>
