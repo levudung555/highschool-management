@@ -22,4 +22,9 @@ public interface EnrollmentService {
 
   PageResponse<ClassStudentResponse> danhSachLop(
       Long maLop, LocalDate ngay, int trang, int kichThuoc);
+
+  PageResponse<EnrollmentStudentResponse> timHocSinh(String tuKhoa, int trang, int kichThuoc);
+
+  PageResponse<EnrollmentRequestResponse> timYeuCau(
+      String tuKhoa, String trangThai, int trang, int kichThuoc);
 }

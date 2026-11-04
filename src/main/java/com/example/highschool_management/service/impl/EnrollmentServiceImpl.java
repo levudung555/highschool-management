@@ -63,7 +63,6 @@ public class EnrollmentServiceImpl implements EnrollmentService {
         .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy lớp: " + id));
   }
 
-
   private Map<Long, SchoolClass> khoaCacLop(Long... ids) {
     var result = new HashMap<Long, SchoolClass>();
     Arrays.stream(ids).distinct().sorted().forEach(id -> result.put(id, khoaLop(id)));
@@ -238,5 +237,43 @@ public class EnrollmentServiceImpl implements EnrollmentService {
         size,
         total,
         total / size + (total % size == 0 ? 0 : 1));
+  }
+
+  private String kiemTraTimKiem(String tuKhoa, int trang, int kichThuoc) {
+    quyenGiaoVu();
+    if (trang < 0 || kichThuoc < 1 || kichThuoc > 100)
+      throw new InvalidRequestException("Trang >= 0, kích thước từ 1 đến 100");
+    String k = tuKhoa == null ? "" : tuKhoa.trim();
+    if (k.length() > 100) throw new InvalidRequestException("Từ khóa tối đa 100 ký tự");
+    return k;
+  }
+
+  @Override
+  public PageResponse<EnrollmentStudentResponse> timHocSinh(
+      String tuKhoa, int trang, int kichThuoc) {
+    String k = kiemTraTimKiem(tuKhoa, trang, kichThuoc);
+    long total = dao.demHocSinh(k);
+    return new PageResponse<>(
+        dao.timHocSinh(k, kichThuoc, (long) trang * kichThuoc),
+        trang,
+        kichThuoc,
+        total,
+        total / kichThuoc + (total % kichThuoc == 0 ? 0 : 1));
+  }
+
+  @Override
+  public PageResponse<EnrollmentRequestResponse> timYeuCau(
+      String tuKhoa, String trangThai, int trang, int kichThuoc) {
+    String k = kiemTraTimKiem(tuKhoa, trang, kichThuoc);
+    String status = trangThai == null ? "" : trangThai;
+    if (!Set.of("", "CHO_DUYET", "DA_DUYET", "TU_CHOI").contains(status))
+      throw new InvalidRequestException("Trạng thái duyệt không hợp lệ");
+    long total = dao.demYeuCau(k, status);
+    return new PageResponse<>(
+        dao.timYeuCau(k, status, kichThuoc, (long) trang * kichThuoc),
+        trang,
+        kichThuoc,
+        total,
+        total / kichThuoc + (total % kichThuoc == 0 ? 0 : 1));
   }
 }

@@ -66,4 +66,21 @@ public class EnrollmentController {
       @RequestParam(name = "kichThuoc", defaultValue = "20") int size) {
     return service.danhSachLop(id, ngay, trang, size);
   }
+
+  @GetMapping("/enrollments")
+  public PageResponse<EnrollmentRequestResponse> timYeuCau(
+      @RequestParam(name = "tuKhoa", defaultValue = "") String tuKhoa,
+      @RequestParam(name = "trangThai", defaultValue = "") String trangThai,
+      @RequestParam(name = "trang", defaultValue = "0") int trang,
+      @RequestParam(name = "kichThuoc", defaultValue = "10") int kichThuoc) {
+    return service.timYeuCau(tuKhoa, trangThai, trang, kichThuoc);
+  }
+
+  @GetMapping("/enrollments/students")
+  public PageResponse<EnrollmentStudentResponse> timHocSinh(
+      @RequestParam(name = "tuKhoa", defaultValue = "") String tuKhoa,
+      @RequestParam(name = "trang", defaultValue = "0") int trang,
+      @RequestParam(name = "kichThuoc", defaultValue = "20") int kichThuoc) {
+    return service.timHocSinh(tuKhoa, trang, kichThuoc);
+  }
 }

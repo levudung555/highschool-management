@@ -1,6 +1,8 @@
 package com.example.highschool_management.dao;
 
 import com.example.highschool_management.dto.response.ClassStudentResponse;
+import com.example.highschool_management.dto.response.EnrollmentRequestResponse;
+import com.example.highschool_management.dto.response.EnrollmentStudentResponse;
 import com.example.highschool_management.model.Enrollment;
 import java.time.*;
 import java.util.*;
@@ -32,4 +34,13 @@ public interface EnrollmentDao {
   long demDanhSachLop(Long maLop, LocalDate ngay);
 
   List<ClassStudentResponse> danhSachLop(Long maLop, LocalDate ngay, int size, long offset);
+
+  long demHocSinh(String tuKhoa);
+
+  List<EnrollmentStudentResponse> timHocSinh(String tuKhoa, int kichThuoc, long viTriBatDau);
+
+  long demYeuCau(String tuKhoa, String trangThai);
+
+  List<EnrollmentRequestResponse> timYeuCau(
+      String tuKhoa, String trangThai, int kichThuoc, long viTriBatDau);
 }
