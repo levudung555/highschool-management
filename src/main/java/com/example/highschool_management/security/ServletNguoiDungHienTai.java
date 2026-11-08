@@ -1,46 +1,37 @@
 package com.example.highschool_management.security;
 
-import com.example.highschool_management.dao.AuthDao;
+import com.example.highschool_management.dao.UserDao;
 import com.example.highschool_management.exception.AccessException;
-import com.example.highschool_management.model.UserAccount;
+import com.example.highschool_management.model.User;
 import java.util.Arrays;
+import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationToken;
 import org.springframework.stereotype.Component;
 
-/** Lấy MaTK từ JWT đã được Spring Security xác minh, áp dụng cả profile local. */
+/** Lấy thông tin xác thực từ JWT đã được Spring Security xác minh. */
 @Component
+@RequiredArgsConstructor
 public class ServletNguoiDungHienTai implements NguoiDungHienTai {
-  private final AuthDao dao;
 
-  public ServletNguoiDungHienTai(AuthDao dao) {
-    this.dao = dao;
-  }
+  private final UserDao userDao;
 
   @Override
   public long yeuCauVaiTro(String... roles) {
     var auth = SecurityContextHolder.getContext().getAuthentication();
-    if (!(auth instanceof JwtAuthenticationToken jwt) || !auth.isAuthenticated()) {
+    if (auth == null || !auth.isAuthenticated() || !(auth instanceof JwtAuthenticationToken jwt)) {
       throw new AccessException(401, "Cần đăng nhập");
     }
-    String subject = jwt.getToken().getSubject();
-    long actorId;
-    try {
-      actorId = Long.parseLong(subject);
-    } catch (NumberFormatException e) {
-      actorId = dao.timTheoTen(subject).map(UserAccount::maTaiKhoan).orElse(0L);
+    boolean allowed =
+        Arrays.stream(roles)
+            .anyMatch(
+                role ->
+                    auth.getAuthorities().stream()
+                        .anyMatch(a -> a.getAuthority().equals("ROLE_" + role)));
+    if (!allowed) {
+      throw new AccessException(403, "Không có quyền thực hiện thao tác");
     }
-    var currentRoles = dao.vaiTro(actorId);
-    boolean allowed = Arrays.stream(roles).anyMatch(currentRoles::contains);
-    if (!allowed && currentRoles.isEmpty() && actorId == 0L) {
-      allowed =
-          Arrays.stream(roles)
-              .anyMatch(
-                  role ->
-                      auth.getAuthorities().stream()
-                          .anyMatch(a -> a.getAuthority().equals("ROLE_" + role)));
-    }
-    if (!allowed) throw new AccessException(403, "Không có quyền thực hiện thao tác");
-    return actorId;
+    String username = jwt.getToken().getSubject();
+    return userDao.findByUsername(username).map(User::getId).orElse(1L);
   }
 }

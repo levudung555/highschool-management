@@ -1,15 +1,17 @@
 CREATE TABLE IF NOT EXISTS tai_khoan (
-    MaTK BIGINT PRIMARY KEY,
+    MaTK BIGINT AUTO_INCREMENT PRIMARY KEY,
+    MaGV BIGINT,
     TenDangNhap VARCHAR(100) NOT NULL UNIQUE,
     MatKhauBam VARCHAR(255) NOT NULL,
-    HoTen VARCHAR(150) NOT NULL,
-    TrangThai VARCHAR(25) DEFAULT 'HOAT_DONG',
-    TokenVersion BIGINT DEFAULT 0
+    HoTen VARCHAR(150),
+    Email VARCHAR(254) UNIQUE,
+    TrangThai VARCHAR(20) DEFAULT 'HOAT_DONG',
+    TokenVersion INT DEFAULT 0
 );
 
 CREATE TABLE IF NOT EXISTS vai_tro (
-    MaVT BIGINT PRIMARY KEY,
-    MaSoVaiTro VARCHAR(50) NOT NULL UNIQUE,
+    MaVT BIGINT AUTO_INCREMENT PRIMARY KEY,
+    MaSoVaiTro VARCHAR(40) NOT NULL UNIQUE,
     TenVaiTro VARCHAR(100) NOT NULL
 );
 
@@ -21,6 +23,11 @@ CREATE TABLE IF NOT EXISTS tai_khoan_vai_tro (
 
 CREATE TABLE IF NOT EXISTS invalidated_token (
     id VARCHAR(255) PRIMARY KEY,
+    expire_time TIMESTAMP NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS invalidated_tokens (
+    id VARCHAR(64) PRIMARY KEY,
     expire_time TIMESTAMP NOT NULL
 );
 
@@ -78,6 +85,7 @@ DELETE FROM tai_khoan_vai_tro;
 DELETE FROM tai_khoan;
 DELETE FROM vai_tro;
 DELETE FROM invalidated_token;
+DELETE FROM invalidated_tokens;
 DELETE FROM yeu_cau_chuyen_lop;
 DELETE FROM xep_lop;
 DELETE FROM lop_hoc;

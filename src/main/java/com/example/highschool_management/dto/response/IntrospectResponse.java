@@ -1,13 +1,6 @@
 package com.example.highschool_management.dto.response;
 
-import lombok.*;
-import lombok.experimental.FieldDefaults;
+import lombok.Builder;
 
-@Data
 @Builder
-@NoArgsConstructor
-@AllArgsConstructor
-@FieldDefaults(level = AccessLevel.PRIVATE)
-public class IntrospectResponse {
-  boolean valid;
-}
+public record IntrospectResponse(boolean valid) {}

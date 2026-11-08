@@ -1,13 +1,8 @@
 package com.example.highschool_management.dto.request;
 
-import lombok.*;
-import lombok.experimental.FieldDefaults;
+import jakarta.validation.constraints.NotBlank;
+import lombok.Builder;
 
-@Data
 @Builder
-@NoArgsConstructor
-@AllArgsConstructor
-@FieldDefaults(level = AccessLevel.PRIVATE)
-public class IntrospectRequest {
-  String token;
-}
+public record IntrospectRequest(
+        @NotBlank(message = "Token is required") String token) {}

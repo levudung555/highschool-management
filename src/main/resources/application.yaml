@@ -13,10 +13,19 @@ server:
   port: 8082
 
 jwt:
-  signerKey: ${JWT_SIGNER_KEY:1234567890123456789012345678901234567890123456789012345678901234}
-  issuer: ${JWT_ISSUER:school-management}
+  signer-key: ${JWT_SIGNER_KEY:1234567890123456789012345678901234567890123456789012345678901234}
+  issuer: ${JWT_ISSUER:highschool-management}
   valid-duration: ${JWT_VALID_DURATION:3600}
   refreshable-duration: ${JWT_REFRESHABLE_DURATION:7200}
+
+admin:
+  username: ${ADMIN_USERNAME:admin}
+  password: ${ADMIN_PASSWORD:adminpassword}
+  email: ${ADMIN_EMAIL:admin@example.com}
+
+app:
+  seed:
+    enabled: ${APP_SEED_ENABLED:true}
 
 logging:
   level:

@@ -1,6 +1,6 @@
-package com.example.highschool_management.entity;
+package com.example.highschool_management.model;
 
-import java.util.Set;
+import java.util.Date;
 import lombok.*;
 import lombok.experimental.FieldDefaults;
 
@@ -10,8 +10,7 @@ import lombok.experimental.FieldDefaults;
 @NoArgsConstructor
 @AllArgsConstructor
 @FieldDefaults(level = AccessLevel.PRIVATE)
-public class User {
-  String username;
-  String password;
-  Set<Role> roles;
+public class InvalidatedToken {
+    String id;
+    Date expireTime;
 }

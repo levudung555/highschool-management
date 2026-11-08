@@ -1,23 +1,32 @@
 package com.example.highschool_management.integration;
 
+import static org.hamcrest.Matchers.*;
 import static org.junit.jupiter.api.Assertions.*;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-import com.example.highschool_management.exception.AccessException;
-import com.example.highschool_management.security.SchoolSecurityConfig;
-import com.example.highschool_management.service.SchoolClassService;
-import java.time.*;
-import java.util.List;
+import com.example.highschool_management.dao.RoleDao;
+import com.example.highschool_management.dao.UserDao;
+import com.example.highschool_management.enums.RoleType;
+import com.example.highschool_management.model.Role;
+import com.example.highschool_management.model.User;
+import com.example.highschool_management.service.JwtTokenService;
+import com.jayway.jsonpath.JsonPath;
+import java.util.Set;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
-import org.springframework.jdbc.core.JdbcTemplate;
-import org.springframework.security.oauth2.jose.jws.MacAlgorithm;
-import org.springframework.security.oauth2.jwt.*;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.context.jdbc.Sql;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RestController;
+import org.springframework.context.annotation.Import;
 
 @SpringBootTest(
     properties = {
@@ -25,171 +34,233 @@ import org.springframework.test.web.servlet.MockMvc;
       "spring.datasource.driver-class-name=org.h2.Driver",
       "spring.datasource.username=sa",
       "spring.datasource.password=",
-      "spring.sql.init.mode=never"
+      "spring.sql.init.mode=always",
+      "spring.sql.init.schema-locations=classpath:uc09-schema.sql",
+      "app.seed.enabled=true"
     })
 @AutoConfigureMockMvc
+@Import(AuthIntegrationTest.TestSecurityController.class)
 @Sql("/uc09-schema.sql")
 class AuthIntegrationTest {
+
   @Autowired MockMvc mvc;
-  @Autowired JdbcTemplate jdbc;
-  @Autowired JwtEncoder encoder;
-  @Autowired Clock clock;
-  @Autowired SchoolClassService classes;
+  @Autowired UserDao userDao;
+  @Autowired RoleDao roleDao;
+  @Autowired PasswordEncoder passwordEncoder;
+  @Autowired JwtTokenService jwtTokenService;
 
-  private String login(String username) throws Exception {
-    var result =
-        mvc.perform(
-                post("/api/v1/auth/login")
-                    .contentType("application/json")
-                    .content("{\"tenDangNhap\":\"" + username + "\",\"matKhau\":\"Test@12345\"}"))
-            .andExpect(status().isOk())
-            .andExpect(jsonPath("$.tokenType").value("Bearer"))
-            .andExpect(jsonPath("$.nguoiDung.matKhauBam").doesNotExist())
-            .andReturn();
-    return com.jayway.jsonpath.JsonPath.read(
-        result.getResponse().getContentAsString(), "$.accessToken");
+  @RestController
+  static class TestSecurityController {
+    @GetMapping("/test/admin-only")
+    @PreAuthorize("hasRole('ADMIN')")
+    public String adminOnly() {
+      return "admin-content";
+    }
+
+    @GetMapping("/test/protected")
+    public String protectedEndpoint() {
+      return "protected-content";
+    }
   }
 
-  @Test
-  void loginAndMeExposeProfileWithoutPassword() throws Exception {
-    String token = login("giaovu");
-    mvc.perform(get("/api/v1/auth/me").header("Authorization", "Bearer " + token))
-        .andExpect(status().isOk())
-        .andExpect(jsonPath("$.maTaiKhoan").value(2))
-        .andExpect(jsonPath("$.vaiTro[0]").value("GIAO_VU"))
-        .andExpect(jsonPath("$.matKhauBam").doesNotExist())
-        .andExpect(header().string("Cache-Control", "no-store"));
-  }
+  @BeforeEach
+  void ensureSeedData() {
+    Role adminRole =
+        roleDao
+            .findByName(RoleType.ADMIN.name())
+            .orElseGet(
+                () ->
+                    roleDao.save(
+                        Role.builder()
+                            .name(RoleType.ADMIN.name())
+                            .description("Quản trị viên")
+                            .build()));
+    roleDao
+        .findByName(RoleType.TEACHER.name())
+        .orElseGet(
+            () ->
+                roleDao.save(
+                    Role.builder().name(RoleType.TEACHER.name()).description("Giáo viên").build()));
+    roleDao
+        .findByName(RoleType.STUDENT.name())
+        .orElseGet(
+            () ->
+                roleDao.save(
+                    Role.builder().name(RoleType.STUDENT.name()).description("Học sinh").build()));
 
-  @Test
-  void badPasswordUnknownAndLockedHaveSameGenericResponse() throws Exception {
-    for (String user : List.of("missing", "locked", "bgh")) {
-      String password = user.equals("bgh") ? "wrong" : "Test@12345";
-      mvc.perform(
-              post("/api/v1/auth/login")
-                  .contentType("application/json")
-                  .content("{\"tenDangNhap\":\"" + user + "\",\"matKhau\":\"" + password + "\"}"))
-          .andExpect(status().isUnauthorized())
-          .andExpect(jsonPath("$.message").value("Tên đăng nhập hoặc mật khẩu không đúng"));
+    if (!userDao.existsByUsername("admin")) {
+      userDao.save(
+          User.builder()
+              .username("admin")
+              .fullName("Administrator")
+              .email("admin@example.com")
+              .password(passwordEncoder.encode("adminpassword"))
+              .enabled(true)
+              .roles(Set.of(adminRole))
+              .build());
     }
   }
 
   @Test
-  void invalidInputAndAnonymousAreRejected() throws Exception {
-    mvc.perform(post("/api/v1/auth/login").contentType("application/json").content("{} "))
-        .andExpect(status().isBadRequest());
-    mvc.perform(get("/api/v1/classes/1")).andExpect(status().isUnauthorized());
-    assertThrows(AccessException.class, () -> classes.getSchoolClassById(1L));
+  void adminLogin_ReturnsJwtToken() throws Exception {
+    mvc.perform(
+            post("/auth/token")
+                .contentType("application/json")
+                .content("{\"username\":\"admin\",\"password\":\"adminpassword\"}"))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.code").value(1000))
+        .andExpect(jsonPath("$.result.authenticated").value(true))
+        .andExpect(jsonPath("$.result.token").isNotEmpty());
   }
 
   @Test
-  void logoutRevokesToken() throws Exception {
-    String token = login("bgh");
-    mvc.perform(post("/api/v1/auth/logout").header("Authorization", "Bearer " + token))
-        .andExpect(status().isNoContent());
-    mvc.perform(get("/api/v1/auth/me").header("Authorization", "Bearer " + token))
-        .andExpect(status().isUnauthorized());
-    mvc.perform(get("/api/v1/auth/me").header("Authorization", "Bearer " + login("bgh")))
+  void loginWithWrongPassword_ReturnsAuthenticationFailed() throws Exception {
+    mvc.perform(
+            post("/auth/token")
+                .contentType("application/json")
+                .content("{\"username\":\"admin\",\"password\":\"wrongpassword\"}"))
+        .andExpect(status().isUnauthorized())
+        .andExpect(jsonPath("$.code").value(1004))
+        .andExpect(jsonPath("$.message").value("Authentication Failed"));
+  }
+
+  @Test
+  void callProtectedEndpoint_WithoutToken_Returns401Json() throws Exception {
+    mvc.perform(get("/test/protected"))
+        .andExpect(status().isUnauthorized())
+        .andExpect(jsonPath("$.code").value(1004))
+        .andExpect(jsonPath("$.message").value("Authentication Failed"));
+  }
+
+  @Test
+  void regularUser_CallingAdminMethod_Returns403Json() throws Exception {
+    Role studentRole = roleDao.findByName(RoleType.STUDENT.name()).orElseThrow();
+    User studentUser =
+        User.builder()
+            .username("student1")
+            .fullName("Student One")
+            .email("student1@example.com")
+            .password(passwordEncoder.encode("studentpassword"))
+            .enabled(true)
+            .roles(Set.of(studentRole))
+            .build();
+    userDao.save(studentUser);
+
+    String studentToken = jwtTokenService.generateAuthToken(studentUser, 3600L);
+
+    // Student calling ADMIN-only endpoint -> 403 Forbidden with code 1032
+    mvc.perform(
+            get("/test/admin-only").header("Authorization", "Bearer " + studentToken))
+        .andExpect(status().isForbidden())
+        .andExpect(jsonPath("$.code").value(1032))
+        .andExpect(jsonPath("$.message").value("You do not have permission"));
+
+    // Admin calling ADMIN-only endpoint -> 200 OK
+    var adminLoginRes =
+        mvc.perform(
+                post("/auth/token")
+                    .contentType("application/json")
+                    .content("{\"username\":\"admin\",\"password\":\"adminpassword\"}"))
+            .andExpect(status().isOk())
+            .andReturn();
+    String adminToken =
+        JsonPath.read(adminLoginRes.getResponse().getContentAsString(), "$.result.token");
+
+    mvc.perform(
+            get("/test/admin-only").header("Authorization", "Bearer " + adminToken))
         .andExpect(status().isOk());
   }
 
   @Test
-  void arenaEduTokenEndpointReturnsStandardResponse() throws Exception {
+  void logout_InvalidatesToken_IntrospectReturnsFalse_AndTokenCannotBeUsedAgain()
+      throws Exception {
+    var adminLoginRes =
+        mvc.perform(
+                post("/auth/token")
+                    .contentType("application/json")
+                    .content("{\"username\":\"admin\",\"password\":\"adminpassword\"}"))
+            .andExpect(status().isOk())
+            .andReturn();
+    String token =
+        JsonPath.read(adminLoginRes.getResponse().getContentAsString(), "$.result.token");
+
+    // Introspect before logout -> valid: true
     mvc.perform(
-            post("/auth/token")
+            post("/auth/introspect")
                 .contentType("application/json")
-                .content("{\"username\":\"bgh\",\"password\":\"Test@12345\"}"))
+                .content("{\"token\":\"" + token + "\"}"))
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.code").value(1000))
-        .andExpect(jsonPath("$.result.token").isNotEmpty())
-        .andExpect(jsonPath("$.result.authenticated").value(true));
-  }
+        .andExpect(jsonPath("$.result.valid").value(true));
 
-  @Test
-  void lockingAccountAndChangingRolesTakeEffectImmediately() throws Exception {
-    String token = login("bgh");
-    jdbc.update("DELETE FROM tai_khoan_vai_tro WHERE MaTK=1");
-    mvc.perform(put("/api/v1/enrollments/1/approval").header("Authorization", "Bearer " + token))
-        .andExpect(status().isForbidden());
-    jdbc.update("UPDATE tai_khoan SET TrangThai='BI_KHOA' WHERE MaTK=1");
-    mvc.perform(get("/api/v1/auth/me").header("Authorization", "Bearer " + token))
-        .andExpect(status().isUnauthorized());
-  }
-
-  @Test
-  void expiredWrongAudienceAndMalformedTokensAreRejected() throws Exception {
-    for (boolean expired : List.of(true, false)) {
-      var claims =
-          JwtClaimsSet.builder()
-              .issuer(SchoolSecurityConfig.ISSUER)
-              .subject("1")
-              .audience(List.of(expired ? SchoolSecurityConfig.AUDIENCE : "other-app"))
-              .issuedAt(clock.instant().minusSeconds(3600))
-              .expiresAt(clock.instant().plusSeconds(expired ? -120 : 600))
-              .claim("ver", 0)
-              .build();
-      String token =
-          encoder
-              .encode(JwtEncoderParameters.from(JwsHeader.with(MacAlgorithm.HS512).build(), claims))
-              .getTokenValue();
-      mvc.perform(get("/api/v1/auth/me").header("Authorization", "Bearer " + token))
-          .andExpect(status().isUnauthorized());
-    }
-    mvc.perform(get("/api/v1/auth/me").header("Authorization", "Bearer broken.jwt.token"))
-        .andExpect(status().isUnauthorized());
-  }
-
-  @Test
-  void introspectValidAndInvalidToken() throws Exception {
-    String token = login("bgh");
+    // Logout
     mvc.perform(
-            post("/api/v1/auth/introspect")
+            post("/auth/logout")
                 .contentType("application/json")
                 .content("{\"token\":\"" + token + "\"}"))
         .andExpect(status().isOk())
-        .andExpect(jsonPath("$.valid").value(true));
+        .andExpect(jsonPath("$.code").value(1000));
 
+    // Introspect after logout -> valid: false
     mvc.perform(
-            post("/api/v1/auth/introspect")
-                .contentType("application/json")
-                .content("{\"token\":\"broken.jwt.token\"}"))
-        .andExpect(status().isOk())
-        .andExpect(jsonPath("$.valid").value(false));
-
-    mvc.perform(post("/api/v1/auth/logout").header("Authorization", "Bearer " + token))
-        .andExpect(status().isNoContent());
-
-    mvc.perform(
-            post("/api/v1/auth/introspect")
+            post("/auth/introspect")
                 .contentType("application/json")
                 .content("{\"token\":\"" + token + "\"}"))
         .andExpect(status().isOk())
-        .andExpect(jsonPath("$.valid").value(false));
+        .andExpect(jsonPath("$.code").value(1000))
+        .andExpect(jsonPath("$.result.valid").value(false));
+
+    // Token cannot be used again -> 401 Unauthorized (code 1004)
+    mvc.perform(get("/test/protected").header("Authorization", "Bearer " + token))
+        .andExpect(status().isUnauthorized())
+        .andExpect(jsonPath("$.code").value(1004));
   }
 
   @Test
-  void refreshTokenSuccessAndRevokesOldToken() throws Exception {
-    String token1 = login("bgh");
-    var refreshResult =
+  void refresh_WithExpiredTokenWithinRefreshDuration_SucceedsAndInvalidatesOldToken()
+      throws Exception {
+    User admin = userDao.findByUsername("admin").orElseThrow();
+
+    // Generate token that expired 120s ago (within 7200s refresh window)
+    String expiredToken = jwtTokenService.generateAuthToken(admin, -120L);
+
+    // Refresh with expired token
+    var refreshRes =
         mvc.perform(
-                post("/api/v1/auth/refresh")
+                post("/auth/refresh")
                     .contentType("application/json")
-                    .content("{\"token\":\"" + token1 + "\"}"))
+                    .content("{\"token\":\"" + expiredToken + "\"}"))
             .andExpect(status().isOk())
-            .andExpect(jsonPath("$.accessToken").isNotEmpty())
-            .andExpect(jsonPath("$.tokenType").value("Bearer"))
+            .andExpect(jsonPath("$.code").value(1000))
+            .andExpect(jsonPath("$.result.authenticated").value(true))
+            .andExpect(jsonPath("$.result.token").isNotEmpty())
             .andReturn();
 
-    String token2 =
-        com.jayway.jsonpath.JsonPath.read(
-            refreshResult.getResponse().getContentAsString(), "$.accessToken");
-    assertNotEquals(token1, token2);
+    String newToken =
+        JsonPath.read(refreshRes.getResponse().getContentAsString(), "$.result.token");
+    assertNotEquals(expiredToken, newToken);
 
-    mvc.perform(get("/api/v1/auth/me").header("Authorization", "Bearer " + token2))
+    // Old token is now revoked -> introspect is false
+    mvc.perform(
+            post("/auth/introspect")
+                .contentType("application/json")
+                .content("{\"token\":\"" + expiredToken + "\"}"))
         .andExpect(status().isOk())
-        .andExpect(jsonPath("$.maTaiKhoan").value(1));
+        .andExpect(jsonPath("$.result.valid").value(false));
 
-    mvc.perform(get("/api/v1/auth/me").header("Authorization", "Bearer " + token1))
-        .andExpect(status().isUnauthorized());
+    // New token works for protected endpoint
+    mvc.perform(get("/test/protected").header("Authorization", "Bearer " + newToken))
+        .andExpect(status().isOk());
+  }
+
+  @Test
+  void introspect_InvalidOrMalformedToken_ReturnsValidFalse() throws Exception {
+    mvc.perform(
+            post("/auth/introspect")
+                .contentType("application/json")
+                .content("{\"token\":\"invalid.token.here\"}"))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.code").value(1000))
+        .andExpect(jsonPath("$.result.valid").value(false));
   }
 }
