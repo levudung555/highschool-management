@@ -1,46 +1,74 @@
 package com.example.highschool_management.dao;
 
 import com.example.highschool_management.dto.response.ClassStudentResponse;
-import com.example.highschool_management.dto.response.EnrollmentRequestResponse;
+
 import com.example.highschool_management.dto.response.EnrollmentStudentResponse;
+import com.example.highschool_management.dto.response.SchoolYearPeriodResponse;
 import com.example.highschool_management.model.Enrollment;
 import java.time.*;
 import java.util.*;
 
 public interface EnrollmentDao {
-  record NamHoc(LocalDate batDau, LocalDate ketThuc) {}
+  SchoolYearPeriodResponse namHoc(Long maNamHoc);
 
   boolean khoaHocSinh(Long maHocSinh);
 
-  NamHoc namHoc(Long maNamHoc);
-
+  // Đọc thông thường, không khóa.
   Optional<Enrollment> timTheoMa(Long maXepLop);
+
+  // Đọc và khóa bản ghi nguồn trước khi chuyển lớp.
+  Optional<Enrollment> timTheoMaDeCapNhat(Long maXepLop);
 
   List<Enrollment> lichSu(Long maHocSinh);
 
+  // Kiểm tra học sinh từng được xếp lớp trong năm học hay chưa.
+  //bao gồm bản ghi đã kết thúc, đang có hiệu lực và bắt đầu trong tương lai.
+  boolean coXepLopTrongNamHoc(Long maHocSinh, Long maNamHoc);
+
+
   boolean trungThoiGian(
-      Long maHocSinh, LocalDate tuNgay, LocalDate denNgay, Long boQuaMaXepLop, Long boQuaMaNguon);
+          Long maHocSinh,
+          Long maNamHoc,
+          LocalDate tuNgay,
+          LocalDate denNgay,
+          Long boQuaMaXepLop
+  );
+  // Tạo phân lớp trực tiếp, trả về MaXL được sinh.
+  long tao(Enrollment enrollment);
 
-  long taoChoDuyet(Enrollment e);
-
-  void luuYeuCauChuyen(Long maXepLopDich, Long maXepLopNguon, String lyDo);
 
   void ketThuc(Long maXepLop, LocalDate denNgay, String lyDo);
-
-  void quyetDinh(Long maXepLop, String trangThai, long nguoiDuyet, LocalDateTime lucDuyet);
 
   long demSiSo(Long maLop, LocalDate ngay);
 
   long demDanhSachLop(Long maLop, LocalDate ngay);
 
-  List<ClassStudentResponse> danhSachLop(Long maLop, LocalDate ngay, int size, long offset);
+  List<ClassStudentResponse> danhSachLop(
+          Long maLop,
+          LocalDate ngay,
+          int kichThuoc,
+          long viTriBatDau
+  );
 
-  long demHocSinh(String tuKhoa);
 
-  List<EnrollmentStudentResponse> timHocSinh(String tuKhoa, int kichThuoc, long viTriBatDau);
+  long demHocSinh(String tuKhoa, Long maNamHocChuaXep);
 
-  long demYeuCau(String tuKhoa, String trangThai);
+  List<EnrollmentStudentResponse> timHocSinh(
+          String tuKhoa,
+          Long maNamHocChuaXep,
+          int kichThuoc,
+          long viTriBatDau
+  );
 
-  List<EnrollmentRequestResponse> timYeuCau(
-      String tuKhoa, String trangThai, int kichThuoc, long viTriBatDau);
+
+  void ghiNhatKyChuyenLop(
+          Long maTaiKhoan,
+          Long maXepLopNguon,
+          Long maXepLopDich,
+          LocalDate ngayChuyen,
+          String lyDo,
+          LocalDateTime thoiDiem
+  );
+  long demPhanLop(String tuKhoa, Long maNamHoc);
+  List<Enrollment> timPhanLop(String tuKhoa, Long maNamHoc, int kichThuoc, long viTriBatDau);
 }

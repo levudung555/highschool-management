@@ -21,7 +21,7 @@ public class EnrollmentController {
   }
 
   private ResponseEntity<EnrollmentResponse> created(EnrollmentResponse result) {
-    return ResponseEntity.created(URI.create("/api/v1/enrollments/" + result.maXepLop()))
+    return ResponseEntity.created(URI.create("/api/v1/enrollments/" + result.getMaXepLop()))
         .body(result);
   }
 
@@ -35,16 +35,6 @@ public class EnrollmentController {
   public ResponseEntity<EnrollmentResponse> chuyenLop(
       @Valid @RequestBody TransferStudentRequest request) {
     return created(service.chuyenLop(request));
-  }
-
-  @PutMapping("/enrollments/{id}/approval")
-  public EnrollmentResponse duyet(@PathVariable("id") Long id) {
-    return service.duyet(id);
-  }
-
-  @PutMapping("/enrollments/{id}/rejection")
-  public EnrollmentResponse tuChoi(@PathVariable("id") Long id) {
-    return service.tuChoi(id);
   }
 
   @GetMapping("/enrollments/{id}")
@@ -68,19 +58,20 @@ public class EnrollmentController {
   }
 
   @GetMapping("/enrollments")
-  public PageResponse<EnrollmentRequestResponse> timYeuCau(
+  public PageResponse<EnrollmentResponse> timPhanLop(
       @RequestParam(name = "tuKhoa", defaultValue = "") String tuKhoa,
-      @RequestParam(name = "trangThai", defaultValue = "") String trangThai,
+      @RequestParam(name = "maNamHoc", required = false) Long maNamHoc,
       @RequestParam(name = "trang", defaultValue = "0") int trang,
       @RequestParam(name = "kichThuoc", defaultValue = "10") int kichThuoc) {
-    return service.timYeuCau(tuKhoa, trangThai, trang, kichThuoc);
+    return service.timPhanLop(tuKhoa, maNamHoc, trang, kichThuoc);
   }
 
   @GetMapping("/enrollments/students")
   public PageResponse<EnrollmentStudentResponse> timHocSinh(
+      @RequestParam(name = "maNamHocChuaXep", required = false) Long maNamHocChuaXep,
       @RequestParam(name = "tuKhoa", defaultValue = "") String tuKhoa,
       @RequestParam(name = "trang", defaultValue = "0") int trang,
       @RequestParam(name = "kichThuoc", defaultValue = "20") int kichThuoc) {
-    return service.timHocSinh(tuKhoa, trang, kichThuoc);
+    return service.timHocSinh(tuKhoa, maNamHocChuaXep, trang, kichThuoc);
   }
 }

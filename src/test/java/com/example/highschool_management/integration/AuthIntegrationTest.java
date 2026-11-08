@@ -98,7 +98,7 @@ class AuthIntegrationTest {
   void lockingAccountAndChangingRolesTakeEffectImmediately() throws Exception {
     String token = login("bgh");
     jdbc.update("DELETE FROM tai_khoan_vai_tro WHERE MaTK=1");
-    mvc.perform(put("/api/v1/enrollments/1/approval").header("Authorization", "Bearer " + token))
+    mvc.perform(get("/api/v1/enrollments/1").header("Authorization", "Bearer " + token))
         .andExpect(status().isForbidden());
     jdbc.update("UPDATE tai_khoan SET TrangThai='BI_KHOA' WHERE MaTK=1");
     mvc.perform(get("/api/v1/auth/me").header("Authorization", "Bearer " + token))

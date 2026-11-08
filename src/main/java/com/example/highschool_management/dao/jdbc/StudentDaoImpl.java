@@ -151,8 +151,8 @@ public class StudentDaoImpl implements StudentDao {
     if (maLop != null || maKhoi != null || maNamHoc != null) {
       sql.append(
           " AND EXISTS (SELECT 1 FROM xep_lop x JOIN lop_hoc l ON l.MaLop=x.MaLop WHERE"
-              + " x.MaHS=HOC_SINH.MaHS AND x.TrangThaiDuyet='DA_DUYET' AND x.TuNgay<=CURRENT_DATE"
-              + " AND (x.DenNgay IS NULL OR x.DenNgay>CURRENT_DATE)");
+              + " x.MaHS=HOC_SINH.MaHS AND x.TuNgay<=CURRENT_DATE AND EXISTS (SELECT 1 FROM nam_hoc n WHERE n.MaNH=l.MaNH AND CURRENT_DATE BETWEEN n.NgayBatDau AND n.NgayKetThuc)"
+              + " AND (x.DenNgay IS NULL OR x.DenNgay>=CURRENT_DATE)");
       if (maLop != null) {
         sql.append(" AND l.MaLop=?");
         params.add(maLop);

@@ -3,7 +3,7 @@ spring:
     name: highschool-management
 
   datasource:
-    url: jdbc:mysql://${MYSQL_HOST:localhost}:3306/highschool_management
+    url: jdbc:mysql://${MYSQL_HOST:localhost}:3306/highschool_management_v2
     username: root
     password: 123456
     driver-class-name: com.mysql.cj.jdbc.Driver

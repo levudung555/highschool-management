@@ -212,16 +212,17 @@ public class SchoolClassDaoImpl implements SchoolClassDao {
                 khoi.SoKhoi,
                 lop.TrangThai,
 
-                -- Đếm học sinh đã duyệt, còn thuộc lớp tại ngày được chọn
+                -- Đếm học sinh thuộc lớp tại ngày chọn, trong khoảng năm học
                 (
                     SELECT COUNT(DISTINCT xepLop.MaHS)
                     FROM xep_lop xepLop
                     WHERE xepLop.MaLop = lop.MaLop
-                      AND xepLop.TrangThaiDuyet = 'DA_DUYET'
+
+                      AND ? BETWEEN namHoc.NgayBatDau AND namHoc.NgayKetThuc
                       AND xepLop.TuNgay <= ?
                       AND (
                           xepLop.DenNgay IS NULL
-                          OR xepLop.DenNgay > ?
+                          OR xepLop.DenNgay >= ?
                       )
                 ) AS SiSo
 
@@ -250,6 +251,7 @@ public class SchoolClassDaoImpl implements SchoolClassDao {
                     resultSet.getString("TrangThai"),
                     resultSet.getLong("SiSo")
             ),
+            ngayTinhSiSo,
             ngayTinhSiSo,
             ngayTinhSiSo,
             tuKhoa,
