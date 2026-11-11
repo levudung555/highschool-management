@@ -2,13 +2,16 @@ package com.example.highschool_management.controller;
 
 import com.example.highschool_management.dto.request.CreateStudentRequest;
 import com.example.highschool_management.dto.request.UpdateStudentRequest;
+import com.example.highschool_management.dto.response.EnrollmentResponse;
 import com.example.highschool_management.dto.response.StudentResponse;
+import com.example.highschool_management.service.EnrollmentService;
 import com.example.highschool_management.service.StudentService;
 import jakarta.validation.Valid;
 import java.util.List;
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
 import lombok.experimental.FieldDefaults;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
@@ -18,6 +21,8 @@ import org.springframework.web.bind.annotation.*;
 public class StudentController {
 
   StudentService studentService;
+  private final EnrollmentService enrollmentService;
+
 
   @PostMapping
   public StudentResponse createUser(@RequestBody @Valid CreateStudentRequest request) {
@@ -38,6 +43,15 @@ public class StudentController {
       @RequestParam(required = false) Long maKhoi,
       @RequestParam(required = false) Long maNamHoc) {
     return studentService.searchStudents(maSoHS, hoTen, maLop, maKhoi, maNamHoc);
+  }
+  @GetMapping("/{id}/enrollments")
+  public ResponseEntity<List<EnrollmentResponse>> lichSuPhanLop(
+          @PathVariable("id") Long maHocSinh
+  ) {
+    List<EnrollmentResponse> response =
+            enrollmentService.lichSu(maHocSinh);
+
+    return ResponseEntity.ok(response);
   }
 
   @GetMapping

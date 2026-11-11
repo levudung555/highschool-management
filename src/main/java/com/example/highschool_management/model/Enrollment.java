@@ -3,7 +3,7 @@ package com.example.highschool_management.model;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 
-/** Một khoảng học sinh thuộc lớp. Khi chuyển lớp phải tạo bản ghi mới để giữ lịch sử. */
+
 public class Enrollment {
   private Long maXepLop;
   private Long maHocSinh;

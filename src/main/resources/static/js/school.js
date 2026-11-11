@@ -1,5 +1,6 @@
 import { mountRecords, configureRecords, renderRecords } from "./records.js";
 import { authorizedFetch, currentUser, logout } from "./auth.js";
+import { enrollmentStudents, enrollmentHistories, studentHistory, inSchoolYear, matchesKeyword, enrollmentPage } from "./enrollment-api.js";
 // Giao diện Bootstrap; API cùng origin với Spring Boot, không cần CORS hoặc frontend server.
 const $ = (id) => document.getElementById(id);
 mountRecords();
@@ -188,7 +189,7 @@ function pager(id, data, onPage) {
   }
   buttons += `<button class="page-button" data-page="${p + 1}" ${p + 1 >= pages ? "disabled" : ""} aria-label="Trang tiếp">›</button>`;
   $(id).innerHTML =
-    `<span>Hiển thị <strong>${fmt(start)}–${fmt(end)}</strong> trong ${fmt(total)} ${id === "classPager" ? "lớp học" : id === "rosterPager" ? "học sinh" : "yêu cầu"}</span><div class="pager-buttons">${buttons}</div>`;
+    `<span>Hiển thị <strong>${fmt(start)}–${fmt(end)}</strong> trong ${fmt(total)} ${id === "classPager" ? "lớp học" : id === "rosterPager" ? "học sinh" : "phân lớp"}</span><div class="pager-buttons">${buttons}</div>`;
   $(id)
     .querySelectorAll("[data-page]")
     .forEach((button) =>
@@ -342,11 +343,17 @@ async function loadRequests(page = state.requestPage) {
   const seq = state.seq.requests = (state.seq.requests || 0) + 1;
   loading("requestRows", 6);
   try {
-    const result = await api("/enrollments?" + query({
-      tuKhoa: $("requestKeyword").value, maNamHoc: $("enrollmentListYear").value,
-      trang: page, kichThuoc: 8,
-    }));
+    const keyword = $("requestKeyword").value;
+    const year = $("enrollmentListYear").value;
+    const students = await enrollmentStudents();
     if (seq !== state.seq.requests) return;
+    const histories = await enrollmentHistories(students);
+    const rows = [...histories.values()].flat()
+      .filter(row => inSchoolYear(row, year, state.classes) && matchesKeyword(row, keyword))
+      .sort((a, b) => b.maXepLop - a.maXepLop);
+    const result = enrollmentPage(rows, page, 8);
+    if (seq !== state.seq.requests) return;
+    state.requestPage = result.trang;
     state.requestRows = result.danhSach;
     $("requestRows").innerHTML = result.danhSach.map(r => `<tr>
       <td><strong>${escapeHtml(r.hoTen)}</strong><small class="d-block">${escapeHtml(r.maSoHocSinh)}</small></td>
@@ -356,16 +363,27 @@ async function loadRequests(page = state.requestPage) {
     </tr>`).join("");
     if (!result.danhSach.length) empty("requestRows", 6, "Chưa có phân lớp phù hợp", "Chọn Xếp lớp để bắt đầu.");
     pager("requestPager", result, p => loadRequests(p));
-  } catch (error) { if (seq === state.seq.requests) tableError("requestRows", 6, error); }
+  } catch (error) { if (seq === state.seq.requests) {
+    tableError("requestRows", 6, error);
+    $("requestPager").textContent = "";
+  } }
 }
 async function loadStudents(target, keyword = "", selected = null) {
   const seq = (state.seq[target] = (state.seq[target] || 0) + 1);
+  $(target).disabled = true;
+  if (target === "studentInput") state.transferSource = null;
   try {
-    const result = await api(
-      "/enrollments/students?" + query({ tuKhoa: keyword, kichThuoc: 100, maNamHocChuaXep: target === "studentInput" && $("enrollmentKind").value === "enroll" ? $("enrollmentYear").value : null }),
-    );
+    const year = target === "studentInput" && $("enrollmentKind").value === "enroll"
+      ? $("enrollmentYear").value : null;
+    const students = await enrollmentStudents();
     if (seq !== state.seq[target]) return;
-    const items = result.danhSach;
+    let items = students.filter(student => matchesKeyword(student, keyword));
+    if (year) {
+      const histories = await enrollmentHistories(items);
+      items = items.filter(student => !histories.get(student.maHocSinh)
+        .some(row => inSchoolYear(row, year, state.classes)));
+    }
+    if (seq !== state.seq[target]) return;
     if (selected && !items.some((s) => s.maHocSinh === selected.maHocSinh))
       items.unshift(selected);
     items.forEach((s) => state.students.set(s.maHocSinh, s));
@@ -378,7 +396,12 @@ async function loadStudents(target, keyword = "", selected = null) {
     );
     if (selected) $(target).value = selected.maHocSinh;
   } catch (error) {
-    if (seq === state.seq[target]) throw error;
+    if (seq === state.seq[target]) {
+      $(target).innerHTML = '<option value="">Không tải được danh sách học sinh</option>';
+      throw error;
+    }
+  } finally {
+    if (seq === state.seq[target]) $(target).disabled = false;
   }
 }
 async function loadHistory() {
@@ -392,7 +415,7 @@ async function loadHistory() {
   $("historyTimeline").innerHTML =
     '<div class="empty-state">Đang tải lịch sử…</div>';
   try {
-    const data = await api(`/students/${id}/enrollments`);
+    const data = await studentHistory(id);
     if (seq !== state.seq.history) return;
     const student = state.students.get(Number(id));
     $("historyTitle").textContent = student
@@ -531,7 +554,8 @@ function filterEnrollmentClasses() {
     && c.maNamHoc === Number($("enrollmentYear").value)
     && c.maKhoi === Number($("enrollmentGrade").value)
     && (!sourceClass || (c.maLop !== sourceClass.maLop && c.maKhoi === sourceClass.maKhoi)));
-  selectOptions("enrollmentClassInput", items, c => c.tenLop, c => c.maLop, "Chọn lớp đích");
+  selectOptions("enrollmentClassInput", items, c => c.tenLop, c => c.maLop,
+    items.length ? "Chọn lớp đích" : "Không có lớp hoạt động phù hợp năm học và khối");
 }
 
 // Tìm đúng lớp tại ngày chuyển, không dùng riêng DenNgay IS NULL.
@@ -543,9 +567,15 @@ async function updateTransferSource() {
   $("currentClassLabel").hidden = false;
   $("currentClassLabel").textContent = "Chọn học sinh để xem lớp hiện tại.";
   if (!id) { filterEnrollmentClasses(); return; }
-  const history = await api(`/students/${id}/enrollments`);
+  const history = await studentHistory(id);
   if (seq !== state.seq.transferSource) return;
   const day = $("enrollmentDateInput").value;
+  const year = state.catalog.namHoc.find(y => y.maNamHoc === Number($("enrollmentYear").value));
+  if (!year || day < year.batDau || day > year.ketThuc || day < state.catalog.homNay) {
+    $("currentClassLabel").textContent = "Chọn ngày chuyển không ở quá khứ và nằm trong năm học.";
+    filterEnrollmentClasses();
+    return;
+  }
   const matches = history.filter(e => {
     const c = state.classes.find(c => c.maLop === e.maLop);
     return c?.maNamHoc === Number($("enrollmentYear").value)
@@ -556,7 +586,9 @@ async function updateTransferSource() {
     const c = state.classes.find(c => c.maLop === source.maLop);
     $("currentClassLabel").textContent = `Lớp tại ngày chuyển: ${c.tenLop}`
       + (source.denNgay ? " — đã có ngày kết thúc, không thể chuyển tiếp bản ghi này." : "");
-    if (!source.denNgay) state.transferSource = source;
+    if (!source.denNgay && day > source.tuNgay) state.transferSource = source;
+    if (day <= source.tuNgay)
+      $("currentClassLabel").textContent += ` — ngày chuyển phải từ ${date(addDay(source.tuNgay))}.`;
     $("enrollmentGrade").value = c.maKhoi;
   } else $("currentClassLabel").textContent = "Không xác định được một lớp duy nhất tại ngày chuyển trong năm học đã chọn.";
   filterEnrollmentClasses();
@@ -575,8 +607,10 @@ async function openEnrollment(kind, student = null) {
   $("currentClassLabel").hidden = kind !== "transfer";
   $("enrollmentGrade").disabled = kind === "transfer";
   const rosterClass = state.classes.find(c => c.maLop === Number($("rosterClass").value));
-  const year = state.catalog.namHoc.find(y => y.batDau <= state.catalog.homNay && y.ketThuc >= state.catalog.homNay) || state.catalog.namHoc[0];
-  $("enrollmentYear").value = (student && rosterClass ? rosterClass.maNamHoc : year?.maNamHoc) || "";
+  const year = state.catalog.namHoc.find(y => y.batDau <= state.catalog.homNay && y.ketThuc >= state.catalog.homNay)
+    || state.catalog.namHoc.find(y => y.ketThuc >= state.catalog.homNay);
+  const rosterYear = student && rosterClass && state.catalog.namHoc.find(y => y.maNamHoc === rosterClass.maNamHoc && y.ketThuc >= state.catalog.homNay);
+  $("enrollmentYear").value = (rosterYear || year)?.maNamHoc || "";
   $("enrollmentGrade").value = (student && rosterClass ? rosterClass.maKhoi : state.catalog.khoi[0]?.maKhoi) || "";
   $("enrollmentDateInput").value = kind === "transfer" ? addDay(state.catalog.homNay) : state.catalog.homNay;
   updateEnrollmentDate(); filterEnrollmentClasses();
@@ -653,15 +687,20 @@ $("enrollmentForm").addEventListener("submit", async (event) => {
   clearErrors(form);
   await busy(form.querySelector('[type="submit"]'), async () => {
     try {
+      if ($("studentInput").disabled) throw new Error("Vui lòng chờ tải danh sách học sinh.");
+      if (!form.reportValidity()) return;
       const transfer = $("enrollmentKind").value === "transfer";
       const body = {};
       if (transfer) {
+        await updateTransferSource();
+        if (!form.reportValidity()) return;
         if (!state.transferSource || state.transferSource.maHocSinh !== Number($("studentInput").value))
           throw new Error("Chọn học sinh có phân lớp nguồn hợp lệ trong năm học này.");
         body.maXepLopHienTai = state.transferSource.maXepLop;
         body.maLopDich = Number($("enrollmentClassInput").value);
         body.ngayChuyen = $("enrollmentDateInput").value;
         body.lyDo = $("transferReasonInput").value.trim();
+        if (!body.lyDo) throw new Error("Nhập lý do chuyển lớp.");
       } else {
         body.maHocSinh = Number($("studentInput").value);
         body.maLop = Number($("enrollmentClassInput").value);
@@ -877,7 +916,7 @@ async function init() {
       (g) => g.maKhoi,
       "Chọn khối",
     );
-    selectOptions("enrollmentYear", c.namHoc, y => y.ten, y => y.maNamHoc, "Chọn năm học");
+    selectOptions("enrollmentYear", c.namHoc.filter(y => y.ketThuc >= c.homNay), y => y.ten, y => y.maNamHoc, "Chọn năm học");
     selectOptions("enrollmentGrade", c.khoi, g => `Khối ${g.soKhoi}`, g => g.maKhoi, "Chọn khối");
     selectOptions("enrollmentListYear", c.namHoc, y => y.ten, y => y.maNamHoc, "Tất cả năm học");
     const active = c.namHoc.find(

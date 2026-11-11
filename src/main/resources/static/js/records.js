@@ -127,17 +127,16 @@ async function loadHome() {
   $("home-stats").innerHTML =
     '<p class="p-3 text-secondary">Đang tải dữ liệu tổng quan…</p>';
   try {
-    const [students, teachers, classes, requests] = await Promise.all([
+    const [students, teachers, classes] = await Promise.all([
       request("/student"),
       request("/teacher"),
       request("/api/v1/classes?kichThuoc=1"),
-      request("/api/v1/enrollments?trangThai=CHO_DUYET&kichThuoc=1"),
     ]);
     const cards = [
       ["Học sinh", students.length, "students", "users"],
       ["Giáo viên", teachers.length, "teachers", "building"],
       ["Lớp học", classes.tongSoPhanTu, "classes", "grid"],
-      ["Yêu cầu chờ duyệt", requests.tongSoPhanTu, "requests", "clock"],
+      ["Lớp đang hoạt động", state.classes.filter(c => c.trangThai === "HOAT_DONG").length, "classes", "grid"],
     ];
     $("home-stats").innerHTML = cards
       .map(

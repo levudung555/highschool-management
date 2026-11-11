@@ -21,6 +21,12 @@ async function main() {
   });
   const w = dom.window;
   w.authorizedFetch = authorizedFetch;
+  w.request = async path => {
+    const response = await authorizedFetch(path);
+    const data = await response.json();
+    if (!response.ok) throw new Error(data.message || `HTTP ${response.status}`);
+    return data;
+  };
   w.currentUser = async () => user;
   w.logout = () => {};
   w.mountRecords = w.configureRecords = w.renderRecords = () => {};
@@ -33,7 +39,9 @@ async function main() {
   let script = fs.readFileSync('src/main/resources/static/js/school.js','utf8')
     .replace(/^import .*;\r?\n/gm,'')
     .replace(/icons\(\);\s*route\(\);\s*init\(\);\s*$/, '');
-  w.eval(script + '\nwindow.testApp = {init, openEnrollment, loadHistory, state};');
+  const adapter = fs.readFileSync('src/main/resources/static/js/enrollment-api.js','utf8')
+    .replace(/^import .*;\r?\n/gm,'').replace(/^export /gm,'');
+  w.eval(adapter + '\n' + script + '\nwindow.testApp = {init, openEnrollment, loadHistory, state};');
   const app = w.testApp;
   const el = id => w.document.getElementById(id);
   const waitFor = async predicate => {

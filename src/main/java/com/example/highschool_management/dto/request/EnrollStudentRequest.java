@@ -4,7 +4,7 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import jakarta.validation.constraints.*;
 
-/** Dữ liệu client gửi lên; người thực hiện do server xác định. */
+
 public class EnrollStudentRequest {
     @NotNull @Positive
     private Long maHocSinh;

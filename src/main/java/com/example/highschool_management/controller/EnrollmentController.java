@@ -12,66 +12,45 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
-@RequestMapping("/api/v1")
+@RequestMapping("/api/v1/enrollments")
 public class EnrollmentController {
-  private final EnrollmentService service;
+  private final EnrollmentService enrollmentService;
 
-  public EnrollmentController(EnrollmentService service) {
-    this.service = service;
+  public EnrollmentController(EnrollmentService enrollmentService) {
+    this.enrollmentService = enrollmentService;
   }
+  @PostMapping
+  public ResponseEntity<EnrollmentResponse> xepLop(@RequestBody EnrollStudentRequest resquest) {
+    EnrollmentResponse response = enrollmentService.xepLop(resquest);
 
-  private ResponseEntity<EnrollmentResponse> created(EnrollmentResponse result) {
-    return ResponseEntity.created(URI.create("/api/v1/enrollments/" + result.getMaXepLop()))
-        .body(result);
+    //tao duong dan toi phan lop vua tao
+    URI location = URI.create(String.format("/api/v1/enrollments/%d", response.getMaXepLop()));
+    //tra http 201 Created va du lieu vua tao
+    return ResponseEntity.created(location).body(response);
   }
-
-  @PostMapping("/enrollments")
-  public ResponseEntity<EnrollmentResponse> xepLop(
-      @Valid @RequestBody EnrollStudentRequest request) {
-    return created(service.xepLop(request));
-  }
-
-  @PostMapping("/enrollments/transfers")
+  @PostMapping("/transfers")
   public ResponseEntity<EnrollmentResponse> chuyenLop(
-      @Valid @RequestBody TransferStudentRequest request) {
-    return created(service.chuyenLop(request));
-  }
+          @RequestBody TransferStudentRequest request
+  ) {
+    EnrollmentResponse response =
+            enrollmentService.chuyenLop(request);
 
-  @GetMapping("/enrollments/{id}")
-  public EnrollmentResponse chiTiet(@PathVariable("id") Long id) {
-    return service.chiTiet(id);
-  }
+    URI location = URI.create(
+            "/api/v1/enrollments/" + response.getMaXepLop()
+    );
 
-  @GetMapping("/students/{id}/enrollments")
-  public List<EnrollmentResponse> lichSu(@PathVariable("id") Long id) {
-    return service.lichSu(id);
+    return ResponseEntity
+            .created(location)
+            .body(response);
   }
+  @GetMapping("/{id}")
+  public ResponseEntity<EnrollmentResponse> chiTiet(
+          @PathVariable("id") Long maXepLop
+  ) {
+    EnrollmentResponse response =
+            enrollmentService.chiTiet(maXepLop);
 
-  @GetMapping("/classes/{id}/students")
-  public PageResponse<ClassStudentResponse> danhSach(
-      @PathVariable("id") Long id,
-      @RequestParam(name = "ngay", required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE)
-          LocalDate ngay,
-      @RequestParam(name = "trang", defaultValue = "0") int trang,
-      @RequestParam(name = "kichThuoc", defaultValue = "20") int size) {
-    return service.danhSachLop(id, ngay, trang, size);
-  }
-
-  @GetMapping("/enrollments")
-  public PageResponse<EnrollmentResponse> timPhanLop(
-      @RequestParam(name = "tuKhoa", defaultValue = "") String tuKhoa,
-      @RequestParam(name = "maNamHoc", required = false) Long maNamHoc,
-      @RequestParam(name = "trang", defaultValue = "0") int trang,
-      @RequestParam(name = "kichThuoc", defaultValue = "10") int kichThuoc) {
-    return service.timPhanLop(tuKhoa, maNamHoc, trang, kichThuoc);
-  }
-
-  @GetMapping("/enrollments/students")
-  public PageResponse<EnrollmentStudentResponse> timHocSinh(
-      @RequestParam(name = "maNamHocChuaXep", required = false) Long maNamHocChuaXep,
-      @RequestParam(name = "tuKhoa", defaultValue = "") String tuKhoa,
-      @RequestParam(name = "trang", defaultValue = "0") int trang,
-      @RequestParam(name = "kichThuoc", defaultValue = "20") int kichThuoc) {
-    return service.timHocSinh(tuKhoa, maNamHocChuaXep, trang, kichThuoc);
+    return ResponseEntity.ok(response);
   }
 }
+

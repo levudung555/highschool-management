@@ -11,190 +11,321 @@ import com.example.highschool_management.security.NguoiDungHienTai;
 import com.example.highschool_management.service.EnrollmentService;
 import java.time.*;
 import java.util.*;
+
+import jakarta.validation.Valid;
+import jakarta.validation.constraints.NotNull;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.*;
 import org.springframework.validation.annotation.Validated;
 
 @Service
 @Validated
-@Transactional(readOnly = true)
 public class EnrollmentServiceImpl implements EnrollmentService {
-    private final EnrollmentDao dao;
-    private final SchoolClassDao classes;
-    private final EnrollmentMapper mapper;
+    private final EnrollmentDao enrollmentDao;
+    private final SchoolClassDao schoolClassDao;
+    private final EnrollmentMapper enrollmentMapper;
     private final NguoiDungHienTai nguoiDung;
     private final Clock clock;
 
-    public EnrollmentServiceImpl(EnrollmentDao dao, SchoolClassDao classes,
-            EnrollmentMapper mapper, NguoiDungHienTai nguoiDung, Clock clock) {
-        this.dao = dao;
-        this.classes = classes;
-        this.mapper = mapper;
+    public EnrollmentServiceImpl(EnrollmentDao enrollmentDao, SchoolClassDao schoolClassDao, EnrollmentMapper enrollmentMapper, NguoiDungHienTai nguoiDung, Clock clock) {
+        this.enrollmentDao = enrollmentDao;
+        this.schoolClassDao = schoolClassDao;
+        this.enrollmentMapper = enrollmentMapper;
         this.nguoiDung = nguoiDung;
         this.clock = clock;
     }
 
-    private long kiemTraQuyen() {
-        return nguoiDung.yeuCauVaiTro("ADMIN", "BGH", "GIAO_VU");
+    private void kiemTraLopVaNgay(SchoolClass lop, LocalDate tuNgay){
+        if(!"HOAT_DONG".equals(lop.getTrangThai())){
+            throw new BusinessException("Lớp học không hoạt động");
+        }
+        if(tuNgay == null){
+            throw new InvalidRequestException("Ngày bắt đầu không được để trống");
+        }
+        LocalDate now = LocalDate.now(clock);
+        if(tuNgay.isBefore(now)){
+            throw new InvalidRequestException("Ngày bắt đầu không được ở quá khứ");
+        }
+
+        SchoolYearPeriodResponse namHoc = enrollmentDao.namHoc(lop.getMaNamHoc());
+        boolean isTruocNamHoc = tuNgay.isBefore(namHoc.getBatDau());
+        boolean isSauNamHoc = tuNgay.isAfter(namHoc.getKetThuc());
+        if(isTruocNamHoc || isSauNamHoc){
+            throw new InvalidRequestException("Ngày bắt đầu không nằm trong năm học");
+        }
     }
 
-    private void kiemTraMa(Long ma) {
-        if (ma == null || ma <= 0) throw new InvalidRequestException("Mã phải lớn hơn 0");
-    }
-
-    private void khoaHocSinh(Long maHocSinh) {
-        kiemTraMa(maHocSinh);
-        if (!dao.khoaHocSinh(maHocSinh))
-            throw new ResourceNotFoundException("Không tìm thấy học sinh");
-    }
-
-    private Enrollment lay(Long maXepLop) {
-        kiemTraMa(maXepLop);
-        return dao.timTheoMa(maXepLop)
-            .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy xếp lớp"));
-    }
-
-    private SchoolClass khoaLop(Long maLop) {
-        kiemTraMa(maLop);
-        return classes.timTheoMaDeCapNhat(maLop)
-            .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy lớp"));
-    }
-
-    private LocalDate homNay() { return LocalDate.now(clock); }
-
-    private void kiemTraLopVaNgay(SchoolClass lop, LocalDate ngay) {
-        if (!"HOAT_DONG".equals(lop.getTrangThai()))
-            throw new BusinessException("Lớp đã ngừng hoạt động");
-        if (ngay == null || ngay.isBefore(homNay()))
-            throw new InvalidRequestException("Ngày hiệu lực không được ở quá khứ");
-        SchoolYearPeriodResponse nam = dao.namHoc(lop.getMaNamHoc());
-        if (ngay.isBefore(nam.getBatDau()) || ngay.isAfter(nam.getKetThuc()))
-            throw new InvalidRequestException("Ngày hiệu lực phải nằm trong năm học của lớp");
-    }
-
-    private Enrollment taoBanGhi(Long maHocSinh, Long maLop, LocalDate tuNgay, long nguoiThucHien) {
-        Enrollment enrollment = new Enrollment();
-        enrollment.setMaHocSinh(maHocSinh);
-        enrollment.setMaLop(maLop);
-        enrollment.setTuNgay(tuNgay);
-        enrollment.setDenNgay(null);
-        enrollment.setMaTaiKhoanThucHien(nguoiThucHien);
-        enrollment.setThoiDiemThucHien(LocalDateTime.now(clock));
-        enrollment.setMaXepLop(dao.tao(enrollment));
-        return enrollment;
+    private SchoolClass khoaLop(Long maLop){
+        Optional<SchoolClass> lop = schoolClassDao.timTheoMaDeCapNhat(maLop);
+        if (lop.isEmpty()) {
+            throw new ResourceNotFoundException("Không tìm thấy lớp học có mã: " + maLop);
+        }
+        SchoolClass lopHoc = lop.get();
+        return lopHoc;
     }
 
     @Override
     @Transactional(isolation = Isolation.READ_COMMITTED)
-    public EnrollmentResponse xepLop(EnrollStudentRequest request) {
-        long nguoiThucHien = kiemTraQuyen();
-        // Khóa học sinh trước khi kiểm tra: chặn hai người cùng xếp lần đầu.
-        khoaHocSinh(request.getMaHocSinh());
-        SchoolClass lop = khoaLop(request.getMaLop());
-        kiemTraLopVaNgay(lop, request.getTuNgay());
-        if (dao.coXepLopTrongNamHoc(request.getMaHocSinh(), lop.getMaNamHoc()))
-            throw new BusinessException("Học sinh đã được xếp lớp trong năm học này");
-        Enrollment enrollment = taoBanGhi(request.getMaHocSinh(), lop.getMaLop(),
-            request.getTuNgay(), nguoiThucHien);
-        return mapper.sangResponse(lay(enrollment.getMaXepLop()));
+    public EnrollmentResponse xepLop(@NotNull @Valid EnrollStudentRequest request){
+        //kiemtraquyen
+        long maTaiKhoan = nguoiDung.yeuCauVaiTro("ADMIN", "BGH", "GIAO_VU");
+
+        //lấy dữ liệu từ request
+        Long maHocSinh = request.getMaHocSinh();
+        Long maLop = request.getMaLop();
+        LocalDate tuNgay = request.getTuNgay();
+
+        //ktra mahocsinh tồn tại khoogn và khóa lớp
+        boolean tonTaiHocSinh = enrollmentDao.khoaHocSinh(maHocSinh);
+        if(!tonTaiHocSinh){
+            throw new ResourceNotFoundException("Không tìm thấy học sinh có mã: " + maHocSinh);
+        }
+
+        //Đọc và khóa lớp cần xếp
+        SchoolClass lopHoc = khoaLop(maLop);
+
+        //ktra lop dang hoạt động và ngày bắt đầu có hợp lệ không
+        kiemTraLopVaNgay(lopHoc, tuNgay);
+
+        //ktra học sinh đã xếp lớp trong năm học chưa
+        boolean daXepLop = enrollmentDao.coXepLopTrongNamHoc(maHocSinh, lopHoc.getMaNamHoc());
+        if(daXepLop) {
+            throw new BusinessException("Học sinh đã xếp lớp trong năm học này");
+        }
+
+        //chuan bi dữ liệu để tạo phân lớp
+        Enrollment en = new Enrollment();
+        en.setMaHocSinh(maHocSinh);
+        en.setMaLop(maLop);
+        en.setTuNgay(tuNgay);
+        en.setDenNgay(null);
+        en.setLyDoKetThuc(null);
+        en.setMaTaiKhoanThucHien(maTaiKhoan);
+        en.setThoiDiemThucHien(LocalDateTime.now(clock));
+
+        //luu xuong database
+        long maXepLop = enrollmentDao.tao(en);
+
+        //Đọc lại để lấy cả tên học sinh, lớp, năm học, người thực hiện.
+        Optional<Enrollment> ketQuaPhanLop = enrollmentDao.timTheoMa(maXepLop);
+        if (ketQuaPhanLop.isEmpty()) {
+            throw new IllegalStateException(
+                    "Không đọc được phân lớp vừa tạo"
+            );
+        }
+        Enrollment phanLopDaLuu = ketQuaPhanLop.get();
+
+        //chuyen du lieu sang response
+        EnrollmentResponse response = enrollmentMapper.sangResponse(phanLopDaLuu);
+        return response;
     }
+
 
     @Override
     @Transactional(isolation = Isolation.READ_COMMITTED)
-    public EnrollmentResponse chuyenLop(TransferStudentRequest request) {
-        long nguoiThucHien = kiemTraQuyen();
-        Enrollment thongTinNguon = lay(request.getMaXepLopHienTai());
-        khoaHocSinh(thongTinNguon.getMaHocSinh());
-        // Đọc lại sau khi chờ khóa; không dùng bản đọc sơ bộ để quyết định chuyển.
-        Enrollment nguon = dao.timTheoMaDeCapNhat(request.getMaXepLopHienTai())
-            .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy phân lớp nguồn"));
-        if (!nguon.getMaHocSinh().equals(thongTinNguon.getMaHocSinh()))
-            throw new BusinessException("Phân lớp nguồn đã thay đổi, vui lòng tải lại");
-        if (nguon.getDenNgay() != null)
-            throw new BusinessException("Phân lớp đã kết thúc hoặc đã có lịch chuyển");
-        if (nguon.getMaLop().equals(request.getMaLopDich()))
-            throw new BusinessException("Lớp đích phải khác lớp cũ");
-        kiemTraMa(request.getMaLopDich());
-        // Khóa lớp theo cùng thứ tự để giảm nguy cơ hai giao dịch chờ nhau.
-        Map<Long, SchoolClass> cacLop = new HashMap<>();
-        Long maNho = Math.min(nguon.getMaLop(), request.getMaLopDich());
-        Long maLon = Math.max(nguon.getMaLop(), request.getMaLopDich());
-        cacLop.put(maNho, khoaLop(maNho));
-        cacLop.put(maLon, khoaLop(maLon));
-        SchoolClass lopCu = cacLop.get(nguon.getMaLop());
-        SchoolClass lopMoi = cacLop.get(request.getMaLopDich());
-        if (!lopCu.getMaNamHoc().equals(lopMoi.getMaNamHoc())
-                || !lopCu.getMaKhoi().equals(lopMoi.getMaKhoi()))
-            throw new BusinessException("Chỉ chuyển lớp trong cùng năm học và cùng khối");
+    public EnrollmentResponse chuyenLop(TransferStudentRequest request){
+        //kiem tra quyen
+        long maTaiKhoan = nguoiDung.yeuCauVaiTro("ADMIN", "BGH", "GIAO_VU");
+        Long maXepLopNguon = request.getMaXepLopHienTai();
+        Long maLopDich = request.getMaLopDich();
         LocalDate ngayChuyen = request.getNgayChuyen();
-        kiemTraLopVaNgay(lopMoi, ngayChuyen);
-        if (!ngayChuyen.isAfter(nguon.getTuNgay()))
-            throw new BusinessException("Ngày chuyển phải sau ngày bắt đầu lớp cũ");
-        if (dao.trungThoiGian(nguon.getMaHocSinh(), lopMoi.getMaNamHoc(),
-                ngayChuyen, null, nguon.getMaXepLop()))
-            throw new BusinessException("Khoảng phân lớp mới bị trùng với lịch sử khác");
-        String lyDo = request.getLyDo().trim();
-        // DenNgay bao gồm ngày kết thúc: chuyển 15/10 thì nguồn kết thúc 14/10.
-        // Cả cập nhật nguồn, thêm đích và nhật ký cùng commit hoặc cùng rollback.
-        dao.ketThuc(nguon.getMaXepLop(), ngayChuyen.minusDays(1), lyDo);
-        Enrollment dich = taoBanGhi(nguon.getMaHocSinh(), lopMoi.getMaLop(), ngayChuyen, nguoiThucHien);
-        dao.ghiNhatKyChuyenLop(nguoiThucHien, nguon.getMaXepLop(), dich.getMaXepLop(),
-            ngayChuyen, lyDo, dich.getThoiDiemThucHien());
-        return mapper.sangResponse(lay(dich.getMaXepLop()));
+
+        //Doc so bo de biet hoc sinh nao can xoa
+        Optional<Enrollment> ketQuaBanDau = enrollmentDao.timTheoMaDeCapNhat(maXepLopNguon);
+        if(ketQuaBanDau.isEmpty()){
+            throw new ResourceNotFoundException("Không tìm thấy phân lớp có mã: " + maXepLopNguon);
+        }
+        Long maHocSinh = ketQuaBanDau.get().getMaHocSinh();
+
+        //Khoc hoc sinh can chuyen
+        boolean hocSinhTonTai = enrollmentDao.khoaHocSinh(maHocSinh);
+        if(!hocSinhTonTai){
+            throw new ResourceNotFoundException("Không tìm thấy học sinh có mã: " + maHocSinh);
+        }
+
+        //Khoa va doc lai nguon sau khi khoa hoc sinh
+        Optional<Enrollment> ketQuaNguon = enrollmentDao.timTheoMaDeCapNhat(maXepLopNguon);
+        if(ketQuaNguon.isEmpty()){
+            throw new ResourceNotFoundException("Không tìm thấy phân lớp có mã: " + maXepLopNguon);
+        }
+        Enrollment xepLopNguon = ketQuaNguon.get();
+        if(!maHocSinh.equals(xepLopNguon.getMaHocSinh())){
+            throw new BusinessException("Mã học sinh không khớp với phân lớp hiện tại");
+        }
+
+        //nguon phai dang mo va dich phai khac nguon
+        if(xepLopNguon.getDenNgay() != null){
+            throw new BusinessException("Phân lớp hiện tại đã kết thúc, không thể chuyển lớp");
+        }
+
+        Long maLopNguon = xepLopNguon.getMaLop();
+
+        if(maLopNguon.equals(maLopDich)){
+            throw new BusinessException("Lớp nguồn và lớp đích không được trùng nhau");
+        }
+
+        //khoa 2 lop nguon va dich
+        SchoolClass lopNguon;
+        SchoolClass lopDich;
+        if(maLopNguon < maLopDich){
+            lopNguon = khoaLop(maLopNguon);
+            lopDich = khoaLop(maLopDich);
+        }else {
+            lopDich = khoaLop(maLopDich);
+            lopNguon = khoaLop(maLopNguon);
+        }
+
+        //hai lop phai cung nam hoc cung khoi
+        if(!lopNguon.getMaNamHoc().equals(lopDich.getMaNamHoc())){
+            throw new BusinessException("Hai lớp không cùng năm học");
+        }
+        if(!lopNguon.getMaKhoi().equals(lopDich.getMaKhoi())) {
+            throw new BusinessException("Hai lớp không cùng khối");
+        }
+
+
+         //kiem tra lop dich co hoat dong vaf ngay chuyen co hop le khong
+        kiemTraLopVaNgay(lopDich, ngayChuyen);
+        if(!ngayChuyen.isAfter(xepLopNguon.getTuNgay())){
+            throw new InvalidRequestException("Ngày chuyển lớp phải sau ngày bắt đầu của phân lớp hiện tại");
+        }
+
+        //ktra khoang moi co bi trung thoi gian voi cac phan lop khac cua hoc sinh khong
+        boolean trungThoiGian = enrollmentDao.trungThoiGian(maHocSinh, lopDich.getMaNamHoc(), ngayChuyen, null, maXepLopNguon);
+        if(trungThoiGian){
+            throw new BusinessException("Khoảng thời gian của phân lớp mới bị trùng với phân lớp khác của học sinh");
+        }
+
+        //Chuẩn bị thông tin dùng chung cho các thao tác ghi
+        String lyDo = request.getLyDo();
+        LocalDate ngayKetThucNguon = ngayChuyen.minusDays(1);
+        LocalDateTime thoiDiem = LocalDateTime.now(clock);
+
+        //Ket thuc lop nguon
+        enrollmentDao.ketThuc(maXepLopNguon, ngayKetThucNguon, lyDo);
+
+        //tao phan lop dich
+        Enrollment enDich = new Enrollment();
+        enDich.setMaHocSinh(maHocSinh);
+        enDich.setMaLop(maLopDich);
+        enDich.setTuNgay(ngayChuyen);
+        enDich.setDenNgay(null);
+        enDich.setLyDoKetThuc(null);
+        enDich.setMaTaiKhoanThucHien(maTaiKhoan);
+        enDich.setThoiDiemThucHien(thoiDiem);
+        long maXepLopDich = enrollmentDao.tao(enDich);
+
+        // Ghi nhật ký chuyển lớp.
+        enrollmentDao.ghiNhatKyChuyenLop(
+                maTaiKhoan,
+                maXepLopNguon,
+                maXepLopDich,
+                ngayChuyen,
+                lyDo,
+                thoiDiem
+        );
+
+        //Đọc lại để lấy cả tên học sinh, lớp, năm học, người thực hiện.
+        Optional<Enrollment> ketQuaPhanLopDich = enrollmentDao.timTheoMa(maXepLopDich);
+        if (ketQuaPhanLopDich.isEmpty()) {
+            throw new IllegalStateException(
+                    "Không đọc được phân lớp vừa tạo"
+            );
+        }
+
+        return enrollmentMapper.sangResponse(ketQuaPhanLopDich.get());
     }
 
     @Override
-    public EnrollmentResponse chiTiet(Long maXepLop) {
-        kiemTraQuyen();
-        return mapper.sangResponse(lay(maXepLop));
-    }
+    @Transactional(readOnly = true)
+    public EnrollmentResponse chiTiet(Long maXepLop){
+        nguoiDung.yeuCauVaiTro("ADMIN", "BGH", "GIAO_VU");
 
+        if (maXepLop == null || maXepLop <= 0) {
+            throw new InvalidRequestException("Mã xếp lớp không được để trống");
+        }
+
+        Optional<Enrollment> ketQua = enrollmentDao.timTheoMa(maXepLop);
+        if (ketQua.isEmpty()) {
+            throw new ResourceNotFoundException("Không tìm thấy phân lớp có mã: " + maXepLop);
+        }
+
+        return enrollmentMapper.sangResponse(ketQua.get());
+    }
     @Override
+    @Transactional(readOnly = true)
     public List<EnrollmentResponse> lichSu(Long maHocSinh) {
-        kiemTraQuyen();
-        kiemTraMa(maHocSinh);
-        return dao.lichSu(maHocSinh).stream().map(mapper::sangResponse).toList();
-    }
 
-    private String kiemTraTimKiem(String tuKhoa, int trang, int kichThuoc) {
-        kiemTraQuyen();
-        if (trang < 0 || kichThuoc < 1 || kichThuoc > 100)
-            throw new InvalidRequestException("Trang >= 0, kích thước từ 1 đến 100");
-        String ketQua = tuKhoa == null ? "" : tuKhoa.trim();
-        if (ketQua.length() > 100) throw new InvalidRequestException("Từ khóa tối đa 100 ký tự");
+        // 1. Kiểm tra quyền.
+        nguoiDung.yeuCauVaiTro(
+                "ADMIN",
+                "BGH",
+                "GIAO_VU"
+        );
+
+        // 2. Kiểm tra mã đầu vào.
+        if (maHocSinh == null || maHocSinh <= 0) {
+            throw new InvalidRequestException(
+                    "Mã học sinh phải lớn hơn 0"
+            );
+        }
+
+        // 3. Đọc danh sách phân lớp.
+        List<Enrollment> danhSach =
+                enrollmentDao.lichSu(maHocSinh);
+
+        // 4. Chuyển từng Model thành Response.
+        List<EnrollmentResponse> ketQua = new ArrayList<>();
+
+        for (Enrollment enrollment : danhSach) {
+            EnrollmentResponse response =
+                    enrollmentMapper.sangResponse(enrollment);
+
+            ketQua.add(response);
+        }
+
         return ketQua;
     }
 
     @Override
+    @Transactional(readOnly = true)
     public PageResponse<ClassStudentResponse> danhSachLop(Long maLop, LocalDate ngay, int trang, int kichThuoc) {
-        kiemTraTimKiem("", trang, kichThuoc);
-        kiemTraMa(maLop);
-        if (classes.findById(maLop).isEmpty()) throw new ResourceNotFoundException("Không tìm thấy lớp");
-        if (ngay == null) ngay = homNay();
-        long tong = dao.demDanhSachLop(maLop, ngay);
-        return new PageResponse<>(dao.danhSachLop(maLop, ngay, kichThuoc, (long) trang * kichThuoc),
-            trang, kichThuoc, tong, (tong + kichThuoc - 1) / kichThuoc);
-    }
+        nguoiDung.yeuCauVaiTro("ADMIN", "BGH", "GIAO_VU");
 
-    @Override
-    public PageResponse<EnrollmentStudentResponse> timHocSinh(String tuKhoa, Long maNamHocChuaXep, int trang, int kichThuoc) {
-        String tuKhoaSach = kiemTraTimKiem(tuKhoa, trang, kichThuoc);
-        if (maNamHocChuaXep != null) {
-            kiemTraMa(maNamHocChuaXep);
-            dao.namHoc(maNamHocChuaXep);
+        if(maLop == null || maLop <= 0) {
+        throw new InvalidRequestException("Mã lớp không được để trống");}
+
+        if(trang <0){
+            throw new InvalidRequestException("Số trang phải lớn hơn hoặc bằng 0");
         }
-        long tong = dao.demHocSinh(tuKhoaSach, maNamHocChuaXep);
-        return new PageResponse<>(dao.timHocSinh(tuKhoaSach, maNamHocChuaXep, kichThuoc, (long) trang * kichThuoc),
-            trang, kichThuoc, tong, (tong + kichThuoc - 1) / kichThuoc);
+        if(kichThuoc<1 || kichThuoc>100){
+            throw new InvalidRequestException("Kích thước trang phải từ 1 đến 100");
+        }
+
+        //ktra lop có tồn tại không
+        if(schoolClassDao.findById(maLop).isEmpty()){
+            throw new ResourceNotFoundException("Không tìm thấy lớp học có mã: " + maLop);
+        }
+
+        //neu khong truyen ngay thi lay ngay hien tai
+        LocalDate ngayTraCuu = ngay;
+        if(ngayTraCuu == null){
+            ngayTraCuu = LocalDate.now(clock);
+        }
+
+        //dem tong so hoc sinh trong lop
+        long tongSoHocSinh = enrollmentDao.demDanhSachLop(maLop, ngayTraCuu);
+
+        //tinh vi tri bat dau
+        long viTriBatDau = (long) trang * kichThuoc;
+
+        //lay danh sach cua trang can xem'
+        List<ClassStudentResponse> danhSach = enrollmentDao.danhSachLop(maLop, ngayTraCuu, kichThuoc, viTriBatDau);
+
+        //tong so trang
+        long tongSoTrang = (tongSoHocSinh + kichThuoc - 1) / kichThuoc;
+
+        return new PageResponse<>(danhSach, trang, kichThuoc, tongSoHocSinh, tongSoTrang);
     }
 
-    @Override
-    public PageResponse<EnrollmentResponse> timPhanLop(String tuKhoa, Long maNamHoc, int trang, int kichThuoc) {
-        String tuKhoaSach = kiemTraTimKiem(tuKhoa, trang, kichThuoc);
-        if (maNamHoc != null) { kiemTraMa(maNamHoc); dao.namHoc(maNamHoc); }
-        long tong = dao.demPhanLop(tuKhoaSach, maNamHoc);
-        List<EnrollmentResponse> danhSach = dao.timPhanLop(tuKhoaSach, maNamHoc, kichThuoc,
-            (long) trang * kichThuoc).stream().map(mapper::sangResponse).toList();
-        return new PageResponse<>(danhSach, trang, kichThuoc, tong, (tong + kichThuoc - 1) / kichThuoc);
-    }
 }
