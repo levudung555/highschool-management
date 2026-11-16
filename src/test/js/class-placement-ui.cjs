@@ -30,6 +30,8 @@ async function main() {
   w.currentUser = async () => user;
   w.logout = () => {};
   w.mountRecords = w.configureRecords = w.renderRecords = () => {};
+  w.mountHomeroom = w.configureHomeroom = w.loadHomeroom = () => {};
+  w.mountTeaching = w.configureTeaching = w.loadTeaching = () => {};
   const component = {show(){}, hide(){}};
   w.bootstrap = {
     Modal: {getOrCreateInstance:()=>component},

@@ -1,9 +1,13 @@
 import { mountRecords, configureRecords, renderRecords } from "./records.js";
+import { mountHomeroom, configureHomeroom, loadHomeroom } from "./homeroom.js";
+import { mountTeaching, configureTeaching, loadTeaching } from "./teaching.js";
 import { authorizedFetch, currentUser, logout } from "./auth.js";
 import { enrollmentStudents, enrollmentHistories, studentHistory, inSchoolYear, matchesKeyword, enrollmentPage } from "./enrollment-api.js";
 // Giao diện Bootstrap; API cùng origin với Spring Boot, không cần CORS hoặc frontend server.
 const $ = (id) => document.getElementById(id);
 mountRecords();
+mountHomeroom();
+mountTeaching();
 const paths = {
   logout: '<path d="M9 3H4v18h5M13 8l5 4-5 4m-5-4h10"/>',
   school:
@@ -454,6 +458,8 @@ async function route() {
     "roster",
     "requests",
     "history",
+    "homeroom",
+    "teaching",
   ].includes(view)
     ? view
     : "home";
@@ -466,6 +472,8 @@ async function route() {
     roster: "Danh sách lớp",
     requests: "Xếp lớp & chuyển lớp",
     history: "Lịch sử học sinh",
+    homeroom: "Phân công chủ nhiệm",
+    teaching: "Phân công giảng dạy",
   };
   $("breadcrumb").textContent = names[state.view];
   document.title = `${names[state.view]} · Schoolspace`;
@@ -480,6 +488,14 @@ async function route() {
   bootstrap.Offcanvas.getInstance($("sidebar"))?.hide();
   if (!state.catalog) return;
   await renderRecords(state.view);
+  if (state.view === "teaching") {
+    configureTeaching(state.user, state.catalog);
+    await loadTeaching();
+  }
+  if (state.view === "homeroom") {
+    configureHomeroom(state.user, state.catalog, state.classes);
+    await loadHomeroom();
+  }
   if (state.view === "classes") await loadClasses();
   if (state.view === "roster") await loadRoster();
   if (state.view === "requests") await loadRequests();

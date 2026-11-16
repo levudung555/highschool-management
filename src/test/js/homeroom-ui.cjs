@@ -1,0 +1,63 @@
+// Run: node src/test/js/homeroom-ui.cjs
+const fs = require('node:fs');
+const assert = require('node:assert/strict');
+const {JSDOM} = require('../../../target/ui-tools/node_modules/jsdom');
+async function main() {
+  const dom = new JSDOM(fs.readFileSync('src/main/resources/static/index.html','utf8'), {url:'http://localhost/#homeroom',runScripts:'outside-only'});
+  const w=dom.window, el=id=>w.document.getElementById(id);
+  w.bootstrap={Modal:{getOrCreateInstance:()=>({show(){},hide(){}})}};
+  const calls=[];
+  let fail=false;
+  const row={maPhanCong:10,maLop:2,tenLop:'10A1',maGiaoVien:5,tenGiaoVien:'Cô Lan',namHoc:'2026-2027',tuNgay:'2026-11-16',denNgay:null,trangThaiDuyet:'DA_DUYET',tenNguoiDuyet:'Giáo vụ',duyetLuc:'2026-11-15T10:00:00'};
+  w.request=async(path,opts={})=>{
+    calls.push({path,...opts});
+    if(path==='/teacher') return [{maGV:5,maSoGV:'GV5',hoTen:'Cô Lan',trangThai:'DANG_CONG_TAC'},{maGV:6,hoTen:'Đã nghỉ',trangThai:'NGUNG_CONG_TAC'}];
+    if(opts.method==='POST') {if(fail) throw Error('Đã có phân công chủ nhiệm trùng thời gian');return {};}
+    if(path.endsWith('?maLop=2')) return [row];
+    if(path.endsWith('/10')) return row;
+    return [];
+  };
+  w.escapeHtml=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  w.formatDate=value=>value || '—';
+  const source=fs.readFileSync('src/main/resources/static/js/homeroom.js','utf8').replace(/^import .*;\r?\n/gm,'').replace(/^export /gm,'');
+  w.eval(source+'\nwindow.app={mountHomeroom,configureHomeroom,loadHomeroom,openHomeroom};');
+  const app=w.app;
+  app.mountHomeroom();
+  const catalog={homNay:'2026-11-15',namHoc:[{maNamHoc:1,ten:'Cũ',batDau:'2025-09-01',ketThuc:'2026-05-31'},{maNamHoc:2,ten:'2026-2027',batDau:'2026-09-01',ketThuc:'2027-05-31'}]};
+  const classes=[{maLop:1,tenLop:'Lớp cũ',maNamHoc:1,namHoc:'2025-2026',trangThai:'HOAT_DONG'},{maLop:2,tenLop:'10A1',maNamHoc:2,namHoc:'2026-2027',trangThai:'HOAT_DONG'}];
+  app.configureHomeroom({vaiTro:['GIAO_VU']},catalog,classes);
+  el('hr-class').value='2';
+  await app.loadHomeroom();
+  assert.match(el('hr-rows').textContent,/Cô Lan/);
+  assert.match(el('hr-rows').textContent,/Sắp bắt đầu/);
+  el('hr-rows').querySelector('button').click();
+  await new Promise(r=>setTimeout(r,0));
+  assert.match(el('hr-detail-body').textContent,/Giáo vụ/);
+  await app.openHomeroom();
+  assert.deepEqual([...el('hr-input-class').options].map(o=>o.value),['','2']);
+  assert.deepEqual([...el('hr-teacher').options].map(o=>o.value),['','5']);
+  assert.equal(el('hr-start').min,'2026-11-15');
+  assert.equal(el('hr-start').max,'2027-05-31');
+  el('hr-teacher').value='5';
+  el('hr-start').value='2026-11-16';
+  el('hr-start').dispatchEvent(new w.Event('change'));
+  el('hr-end').value='2026-11-16';
+  assert.equal(el('hr-form').checkValidity(),false);
+  el('hr-end').value='';
+  const submit=()=>el('hr-form').dispatchEvent(new w.Event('submit',{bubbles:true,cancelable:true}));
+  submit(); submit();
+  await new Promise(r=>setTimeout(r,10));
+  const writes=calls.filter(c=>c.method==='POST');
+  assert.equal(writes.length,1);
+  assert.deepEqual(JSON.parse(writes[0].body),{maLop:2,maGiaoVien:5,tuNgay:'2026-11-16',denNgay:null});
+  assert.equal(el('hr-success').hidden,false);
+  await app.openHomeroom(); el('hr-teacher').value='5'; fail=true; submit();
+  await new Promise(r=>setTimeout(r,10));
+  assert.match(el('hr-form-error').textContent,/trùng thời gian/);
+  assert.equal(el('hr-save').disabled,false);
+  app.configureHomeroom({vaiTro:['GIAO_VIEN']},catalog,classes);
+  assert.equal(el('hr-create').disabled,true);
+  dom.window.close();
+  console.log('PASS: homeroom filters, dates, history, detail, POST, duplicate prevention, errors and role controls');
+}
+main().catch(err=>{console.error(err);process.exitCode=1;});
