@@ -19,7 +19,7 @@ public class GuardianDaoImpl implements GuardianDao {
 
     @Override
     public Guardian insertGuardian(Guardian guardian) {
-        String sql = "INSERT INTO NGUOI_GIAM_HO (HoTen, SoDienThoai, Email, DiaChi) VALUES (?, ?, ?, ?)";
+        String sql = "INSERT INTO nguoi_giam_ho (HoTen, SoDienThoai, Email, DiaChi) VALUES (?, ?, ?, ?)";
         try (Connection conn = JdbcConnect.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
             ps.setString(1, guardian.getHoTen());
@@ -40,7 +40,7 @@ public class GuardianDaoImpl implements GuardianDao {
 
     @Override
     public boolean updateGuardian(Guardian guardian) {
-        String sql = "UPDATE NGUOI_GIAM_HO SET HoTen = ?, SoDienThoai = ?, Email = ?, DiaChi = ? WHERE MaNGH = ?";
+        String sql = "UPDATE nguoi_giam_ho SET HoTen = ?, SoDienThoai = ?, Email = ?, DiaChi = ? WHERE MaNGH = ?";
         try (Connection conn = JdbcConnect.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql)) {
             ps.setString(1, guardian.getHoTen());
@@ -56,7 +56,7 @@ public class GuardianDaoImpl implements GuardianDao {
 
     @Override
     public boolean existsSoDienThoai(String soDienThoai) {
-        String sql = "SELECT EXISTS(SELECT 1 FROM NGUOI_GIAM_HO WHERE SoDienThoai = ?)";
+        String sql = "SELECT EXISTS(SELECT 1 FROM nguoi_giam_ho WHERE SoDienThoai = ?)";
         try (Connection conn = JdbcConnect.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql)) {
             ps.setString(1, soDienThoai);
@@ -73,7 +73,7 @@ public class GuardianDaoImpl implements GuardianDao {
 
     @Override
     public boolean existsEmail(String email) {
-        String sql = "SELECT EXISTS(SELECT 1 FROM NGUOI_GIAM_HO WHERE Email = ?)";
+        String sql = "SELECT EXISTS(SELECT 1 FROM nguoi_giam_ho WHERE Email = ?)";
         try (Connection conn = JdbcConnect.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql)) {
             ps.setString(1, email);
@@ -90,7 +90,7 @@ public class GuardianDaoImpl implements GuardianDao {
 
     @Override
     public Optional<Guardian> findByMaNGH(Long maNGH) {
-        String sql = "SELECT * FROM NGUOI_GIAM_HO WHERE MaNGH = ?";
+        String sql = "SELECT * FROM nguoi_giam_ho WHERE MaNGH = ?";
         try (Connection conn = JdbcConnect.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql)) {
             ps.setLong(1, maNGH);
@@ -110,7 +110,7 @@ public class GuardianDaoImpl implements GuardianDao {
         if (maNGH == null || maNGH.isEmpty()) {
             return false;
         }
-        String sql = "DELETE FROM NGUOI_GIAM_HO WHERE MaNGH IN ("
+        String sql = "DELETE FROM nguoi_giam_ho WHERE MaNGH IN ("
                 + String.join(",", Collections.nCopies(maNGH.size(), "?"))
                 + ")";
         try (Connection conn = JdbcConnect.getConnection();
@@ -129,7 +129,7 @@ public class GuardianDaoImpl implements GuardianDao {
         if (maNGH == null || maNGH.isEmpty()) {
             return Collections.emptyList();
         }
-        String sql = "SELECT MaNGH FROM NGUOI_GIAM_HO WHERE MaNGH IN ("
+        String sql = "SELECT MaNGH FROM nguoi_giam_ho WHERE MaNGH IN ("
                 + String.join(",", Collections.nCopies(maNGH.size(), "?"))
                 + ")";
         List<Long> existingIds = new ArrayList<>();
@@ -151,7 +151,7 @@ public class GuardianDaoImpl implements GuardianDao {
 
     @Override
     public List<Guardian> findAll() {
-        String sql = "SELECT * FROM NGUOI_GIAM_HO ORDER BY MaNGH DESC";
+        String sql = "SELECT * FROM nguoi_giam_ho ORDER BY MaNGH DESC";
         List<Guardian> list = new ArrayList<>();
         try (Connection conn = JdbcConnect.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql);

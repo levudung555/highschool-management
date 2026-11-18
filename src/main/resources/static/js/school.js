@@ -454,6 +454,7 @@ async function route() {
     "roster",
     "requests",
     "history",
+    "attendance",
   ].includes(view)
     ? view
     : "home";
@@ -466,6 +467,7 @@ async function route() {
     roster: "Danh sách lớp",
     requests: "Xếp lớp & chuyển lớp",
     history: "Lịch sử học sinh",
+    attendance: "Điểm danh học sinh",
   };
   $("breadcrumb").textContent = names[state.view];
   document.title = `${names[state.view]} · Schoolspace`;
@@ -483,6 +485,7 @@ async function route() {
   if (state.view === "classes") await loadClasses();
   if (state.view === "roster") await loadRoster();
   if (state.view === "requests") await loadRequests();
+  if (state.view === "attendance") await loadAttendanceInit();
   if (state.view === "history") {
     const selected = sessionStorage.getItem("school.historyStudent");
     if (selected) {
@@ -940,6 +943,255 @@ async function init() {
     );
   }
 }
+// --- UC11: Điểm danh học sinh ---
+state.attendanceClasses = [];
+state.currentAttendanceSession = null;
+
+async function loadAttendanceInit() {
+  if (!$("attDate").value) {
+    $("attDate").value = state.catalog?.homNay || new Date().toISOString().slice(0, 10);
+  }
+  // Load danh sách năm học vào select
+  if ($("attYear") && state.catalog?.namHoc) {
+    const curVal = $("attYear").value;
+    selectOptions("attYear", state.catalog.namHoc, (y) => y.ten, (y) => y.maNamHoc, "Tất cả năm học");
+    if (curVal) $("attYear").value = curVal;
+  }
+  await loadAttendanceClasses();
+}
+
+async function loadAttendanceClasses() {
+  try {
+    const ngay = $("attDate").value || state.catalog?.homNay;
+    const classes = await api(`/attendance/classes?ngay=${ngay}`);
+    state.attendanceClasses = classes;
+    renderAttendanceClassOptions();
+  } catch (err) {
+    console.error("Không tải được danh sách lớp được phép điểm danh", err);
+  }
+}
+
+function renderAttendanceClassOptions() {
+  const yearFilter = $("attYear").value;
+  let filtered = state.attendanceClasses || [];
+  if (yearFilter) {
+    filtered = filtered.filter(c => String(c.maNH) === String(yearFilter));
+  }
+  const select = $("attClass");
+  const oldVal = select.value;
+  select.innerHTML = '<option value="">-- Chọn lớp học --</option>' +
+    filtered.map(c => {
+      let roleLabel = c.vaiTroPhuTrach === "CHU_NHIEM" ? " (CN)" : (c.vaiTroPhuTrach === "BO_MON" ? ` (${c.tenMonHoc || "Bộ môn"})` : "");
+      return `<option value="${c.maLop}" data-lmh="${c.maLMH || ''}">${escapeHtml(c.tenLop)} · ${escapeHtml(c.namHoc)}${roleLabel}</option>`;
+    }).join("");
+  if (oldVal && filtered.some(c => String(c.maLop) === String(oldVal))) {
+    select.value = oldVal;
+  }
+}
+
+$("attYear")?.addEventListener("change", () => renderAttendanceClassOptions());
+$("attDate")?.addEventListener("change", async () => {
+  await loadAttendanceClasses();
+});
+
+$("openAttendanceBtn")?.addEventListener("click", async () => {
+  const maLop = $("attClass").value;
+  if (!maLop) {
+    toast("Vui lòng chọn lớp học để điểm danh");
+    return;
+  }
+  const ngay = $("attDate").value;
+  const maKhung = $("attSession").value;
+  const opt = $("attClass").selectedOptions[0];
+  const maLMH = opt?.dataset.lmh || "";
+
+  $("openAttendanceBtn").disabled = true;
+  try {
+    let url = `/attendance/session?maLop=${maLop}&ngay=${ngay}&phamVi=BUOI&maKhung=${maKhung}`;
+    if (maLMH) url += `&maLMH=${maLMH}`;
+    const session = await api(url);
+    state.currentAttendanceSession = session;
+    renderAttendanceSession(session);
+  } catch (err) {
+    globalError(err);
+  } finally {
+    $("openAttendanceBtn").disabled = false;
+  }
+});
+
+function renderAttendanceSession(session) {
+  const card = $("attendanceListCard");
+  card.style.display = "block";
+  $("attStudentCount").textContent = `${session.danhSachHocSinh?.length || 0} học sinh`;
+
+  const isCreated = session.maPDD != null;
+  const isLocked = Boolean(session.daKhoa);
+
+  const badge = $("attSessionStatusBadge");
+  if (isLocked) {
+    badge.className = "badge bg-danger";
+    badge.textContent = "Đã chốt sổ (Khóa)";
+  } else if (isCreated) {
+    badge.className = "badge bg-success";
+    badge.textContent = "Đã lưu phiên";
+  } else {
+    badge.className = "badge bg-secondary";
+    badge.textContent = "Chưa lưu phiên";
+  }
+
+  let infoText = `Lớp: ${escapeHtml(session.tenLop)} | Ngày: ${date(session.ngay)} | Buổi: ${session.maKhung}`;
+  if (session.nguoiTao) {
+    infoText += ` | Người tạo: ${escapeHtml(session.nguoiTao)}`;
+  }
+  $("attSessionInfo").textContent = infoText;
+
+  // Cập nhật nút lưu
+  const saveBtn = $("btnSaveAttendance");
+  const saveBtnText = $("btnSaveAttendanceText");
+  if (isLocked) {
+    saveBtn.disabled = true;
+    saveBtnText.textContent = "Phiên đã chốt sổ";
+  } else {
+    saveBtn.disabled = false;
+    saveBtnText.textContent = isCreated ? "Cập nhật điểm danh" : "Lưu điểm danh";
+  }
+
+  // Khóa thao tác hàng loạt nếu đã khóa
+  $("btnBatchCoMat").disabled = isLocked;
+  $("btnBatchCoPhep").disabled = isLocked;
+  $("btnBatchKhongPhep").disabled = isLocked;
+  $("btnBatchReset").disabled = isLocked;
+
+  const rows = $("attendanceTableRows");
+  if (!session.danhSachHocSinh || session.danhSachHocSinh.length === 0) {
+    rows.innerHTML = `<tr><td colspan="6" class="text-center py-4 text-secondary">Lớp không có học sinh nào tại ngày ${date(session.ngay)}.</td></tr>`;
+    saveBtn.disabled = true;
+    return;
+  }
+
+  rows.innerHTML = session.danhSachHocSinh.map((hs, index) => {
+    const curStatus = hs.trangThai || "CO_MAT";
+    const curNote = hs.ghiChu || "";
+    return `
+      <tr data-maxl="${hs.maXL}">
+        <td class="text-secondary">${index + 1}</td>
+        <td><strong>${escapeHtml(hs.maSoHS)}</strong></td>
+        <td>${escapeHtml(hs.hoTen)}</td>
+        <td class="text-secondary small">${date(hs.ngaySinh)}</td>
+        <td>
+          <select class="form-select form-select-sm att-status-select" ${isLocked ? 'disabled' : ''}>
+            <option value="CO_MAT" ${curStatus === "CO_MAT" ? "selected" : ""}>Có mặt</option>
+            <option value="VANG_CO_PHEP" ${curStatus === "VANG_CO_PHEP" ? "selected" : ""}>Vắng có phép</option>
+            <option value="VANG_KHONG_PHEP" ${curStatus === "VANG_KHONG_PHEP" ? "selected" : ""}>Vắng không phép</option>
+            <option value="DI_MUON" ${curStatus === "DI_MUON" ? "selected" : ""}>Đi muộn</option>
+          </select>
+        </td>
+        <td>
+          <input type="text" maxlength="255" class="form-control form-control-sm att-note-input"
+            value="${escapeHtml(curNote)}" placeholder="Ghi chú (tùy chọn)" ${isLocked ? 'disabled' : ''} />
+        </td>
+      </tr>
+    `;
+  }).join("");
+
+  updateStatusColors();
+  rows.querySelectorAll(".att-status-select").forEach(sel => {
+    sel.addEventListener("change", updateStatusColors);
+  });
+}
+
+function updateStatusColors() {
+  $("attendanceTableRows").querySelectorAll("tr").forEach(tr => {
+    const sel = tr.querySelector(".att-status-select");
+    if (!sel) return;
+    sel.className = "form-select form-select-sm att-status-select";
+    if (sel.value === "CO_MAT") sel.classList.add("text-success", "border-success");
+    else if (sel.value === "VANG_CO_PHEP") sel.classList.add("text-warning", "border-warning");
+    else if (sel.value === "VANG_KHONG_PHEP") sel.classList.add("text-danger", "border-danger");
+    else if (sel.value === "DI_MUON") sel.classList.add("text-info", "border-info");
+  });
+}
+
+// Thao tác hàng loạt
+$("btnBatchCoMat")?.addEventListener("click", () => {
+  $("attendanceTableRows").querySelectorAll(".att-status-select").forEach(sel => sel.value = "CO_MAT");
+  updateStatusColors();
+});
+$("btnBatchCoPhep")?.addEventListener("click", () => {
+  $("attendanceTableRows").querySelectorAll(".att-status-select").forEach(sel => sel.value = "VANG_CO_PHEP");
+  updateStatusColors();
+});
+$("btnBatchKhongPhep")?.addEventListener("click", () => {
+  $("attendanceTableRows").querySelectorAll(".att-status-select").forEach(sel => sel.value = "VANG_KHONG_PHEP");
+  updateStatusColors();
+});
+$("btnBatchReset")?.addEventListener("click", () => {
+  if (state.currentAttendanceSession) {
+    renderAttendanceSession(state.currentAttendanceSession);
+  }
+});
+
+// Lưu điểm danh
+$("btnSaveAttendance")?.addEventListener("click", async () => {
+  const session = state.currentAttendanceSession;
+  if (!session) return;
+  const isCreated = session.maPDD != null;
+
+  const chiTiet = [];
+  let hasError = false;
+  $("attendanceTableRows").querySelectorAll("tr[data-maxl]").forEach(tr => {
+    const maXL = Number(tr.dataset.maxl);
+    const trangThai = tr.querySelector(".att-status-select").value;
+    const ghiChu = tr.querySelector(".att-note-input").value.trim();
+    if (ghiChu.length > 255) {
+      toast("Ghi chú của học sinh không được dài quá 255 ký tự");
+      hasError = true;
+    }
+    chiTiet.push({ maXL, trangThai, ghiChu });
+  });
+
+  if (hasError) return;
+
+  $("btnSaveAttendance").disabled = true;
+  try {
+    let resSession;
+    if (!isCreated) {
+      const payload = {
+        maLop: session.maLop,
+        maHK: session.maHK,
+        maLMH: session.maLMH,
+        ngay: session.ngay,
+        phamVi: session.phamVi,
+        maKhung: session.maKhung,
+        chiTiet: chiTiet
+      };
+      resSession = await api("/attendance/session", {
+        method: "POST",
+        body: JSON.stringify(payload)
+      });
+      toast("Tạo và lưu phiên điểm danh thành công!");
+    } else {
+      const payload = { chiTiet: chiTiet };
+      resSession = await api(`/attendance/session/${session.maPDD}`, {
+        method: "PUT",
+        body: JSON.stringify(payload)
+      });
+      toast("Cập nhật điểm danh thành công!");
+    }
+    state.currentAttendanceSession = resSession;
+    renderAttendanceSession(resSession);
+  } catch (err) {
+    globalError(err);
+  } finally {
+    $("btnSaveAttendance").disabled = false;
+  }
+});
+
+$("attendanceLookupBtn")?.addEventListener("click", () => {
+  toast("Điều hướng sang UC12 - Tra cứu chuyên cần");
+  // Có thể chuyển tab hoặc mở thông báo
+});
+
 $("logoutBtn").addEventListener("click", () => logout());
 icons();
 route();
