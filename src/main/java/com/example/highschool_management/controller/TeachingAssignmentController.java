@@ -1,6 +1,6 @@
 package com.example.highschool_management.controller;
 
-//import com.example.highschool_management.dto.response.ClassSubjectOptionResponse;
+import com.example.highschool_management.dto.response.ClassSubjectOptionResponse;
 
 import com.example.highschool_management.dto.request.CreateTeachingAssignmentRequest;
 import com.example.highschool_management.dto.response.TeachingAssignmentResponse;
@@ -25,11 +25,11 @@ public class TeachingAssignmentController {
         TeachingAssignmentResponse response = service.tao(request);
         return ResponseEntity.status(201).body(response);
     }
-//
-//    @GetMapping("/options")
-//    public List<ClassSubjectOptionResponse> luaChon() {
-//        return service.danhSachLuaChon();
-//    }
+
+    @GetMapping("/options")
+    public List<ClassSubjectOptionResponse> luaChon() {
+        return service.danhSachLuaChon();
+    }
 
     @GetMapping("/{id}")
     public ResponseEntity<TeachingAssignmentResponse> chiTiet(@PathVariable("id") Long id) {

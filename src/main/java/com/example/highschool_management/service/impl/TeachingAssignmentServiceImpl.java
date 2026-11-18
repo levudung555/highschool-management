@@ -1,6 +1,6 @@
 package com.example.highschool_management.service.impl;
 
-//import com.example.highschool_management.dto.response.ClassSubjectOptionResponse;
+import com.example.highschool_management.dto.response.ClassSubjectOptionResponse;
 
 import com.example.highschool_management.dao.*;
 import com.example.highschool_management.dto.request.CreateTeachingAssignmentRequest;
@@ -143,12 +143,12 @@ public class TeachingAssignmentServiceImpl implements TeachingAssignmentService 
         return teachingAssignmentMapper.sangResponse(phanCongMoi.get());
     }
 
-//    @Override
-//    @Transactional(readOnly = true)
-//    public List<ClassSubjectOptionResponse> danhSachLuaChon() {
-//        nguoiDung.yeuCauVaiTro("ADMIN", "BGH", "GIAO_VU");
-//        return classSubjectDao.danhSachLuaChon();
-//    }
+    @Override
+    @Transactional(readOnly = true)
+    public List<ClassSubjectOptionResponse> danhSachLuaChon() {
+        nguoiDung.yeuCauVaiTro("ADMIN", "BGH", "GIAO_VU");
+        return classSubjectDao.danhSachLuaChon();
+    }
 
     @Override
     @Transactional(readOnly = true)
