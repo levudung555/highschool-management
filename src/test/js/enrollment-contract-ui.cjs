@@ -50,6 +50,8 @@ async function main() {
   w.currentUser = async()=>({hoTen:'Giáo vụ',vaiTro:['GIAO_VU']});
   w.logout=()=>{};
   w.mountRecords=w.configureRecords=w.renderRecords=()=>{};
+  w.mountHomeroom=w.configureHomeroom=w.loadHomeroom=()=>{};
+  w.mountTeaching = w.configureTeaching = w.loadTeaching = () => {};
   w.bootstrap={Modal:{getOrCreateInstance:()=>({show(){},hide(){}})},Toast:{getOrCreateInstance:()=>({show(){}})},Offcanvas:{getInstance:()=>null}};
   const strip = file => fs.readFileSync(file,'utf8').replace(/^import .*;\r?\n/gm,'').replace(/^export /gm,'');
   const adapter = strip('src/main/resources/static/js/enrollment-api.js');
