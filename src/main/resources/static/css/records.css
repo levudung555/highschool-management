@@ -162,6 +162,48 @@
   min-height: 44px;
 }
 
+/* Thanh cuộn cho danh sách người giám hộ khi thêm học sinh */
+#student-guardians-container {
+  max-height: 360px;
+  overflow-y: auto;
+  padding-right: 6px;
+}
+#student-guardians-container::-webkit-scrollbar {
+  width: 6px;
+}
+#student-guardians-container::-webkit-scrollbar-track {
+  background: #f1f5f3;
+  border-radius: 4px;
+}
+#student-guardians-container::-webkit-scrollbar-thumb {
+  background: #b8cfc5;
+  border-radius: 4px;
+}
+#student-guardians-container::-webkit-scrollbar-thumb:hover {
+  background: #8faea2;
+}
+
+/* Thanh cuộn cho danh sách người giám hộ trong chi tiết hồ sơ */
+.guardian-list {
+  max-height: 280px;
+  overflow-y: auto;
+  padding-right: 6px;
+}
+.guardian-list::-webkit-scrollbar {
+  width: 6px;
+}
+.guardian-list::-webkit-scrollbar-track {
+  background: #f1f5f3;
+  border-radius: 4px;
+}
+.guardian-list::-webkit-scrollbar-thumb {
+  background: #b8cfc5;
+  border-radius: 4px;
+}
+.guardian-list::-webkit-scrollbar-thumb:hover {
+  background: #8faea2;
+}
+
 /* 4. Responsive: điều khiển đủ rộng trên điện thoại. */
 @media (max-width: 1100px) {
   .home-layout {

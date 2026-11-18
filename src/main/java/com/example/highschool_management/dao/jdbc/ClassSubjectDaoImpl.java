@@ -1,6 +1,6 @@
 package com.example.highschool_management.dao.jdbc;
 
-import com.example.highschool_management.dto.response.ClassSubjectOptionResponse;
+// import com.example.highschool_management.dto.response.ClassSubjectOptionResponse;
 
 import com.example.highschool_management.dao.ClassSubjectDao;
 import com.example.highschool_management.model.ClassSubject;
@@ -19,25 +19,25 @@ public class ClassSubjectDaoImpl implements ClassSubjectDao {
         this.jdbcTemplate = jdbcTemplate;
     }
 
-    @Override
-    public List<ClassSubjectOptionResponse> danhSachLuaChon() {
-        String sql = """
-                SELECT lmh.MaLMH, l.MaLop, l.TenLop, n.MaNH, n.MaSoNH,
-                       mh.TenMon, hk.SoHocKy, hk.NgayBatDau, hk.NgayKetThuc, l.TrangThai
-                FROM lop_mon_hoc lmh
-                JOIN lop_hoc l ON l.MaLop = lmh.MaLop
-                JOIN mon_hoc mh ON mh.MaMH = lmh.MaMH
-                JOIN hoc_ky hk ON hk.MaHK = lmh.MaHK AND hk.MaNH = l.MaNH
-                JOIN nam_hoc n ON n.MaNH = l.MaNH
-                ORDER BY n.NgayBatDau DESC, l.TenLop, hk.SoHocKy, mh.TenMon, lmh.MaLMH
-                """;
-        return jdbcTemplate.query(sql, (rs, rowNum) ->
-                new ClassSubjectOptionResponse(
-                        rs.getLong("MaLMH"), rs.getLong("MaLop"), rs.getString("TenLop"),
-                        rs.getLong("MaNH"), rs.getString("MaSoNH"), rs.getString("TenMon"),
-                        rs.getInt("SoHocKy"), rs.getObject("NgayBatDau", java.time.LocalDate.class),
-                        rs.getObject("NgayKetThuc", java.time.LocalDate.class), rs.getString("TrangThai")));
-    }
+//    @Override
+//    public List<ClassSubjectOptionResponse> danhSachLuaChon() {
+//        String sql = """
+//                SELECT lmh.MaLMH, l.MaLop, l.TenLop, n.MaNH, n.MaSoNH,
+//                       mh.TenMon, hk.SoHocKy, hk.NgayBatDau, hk.NgayKetThuc, l.TrangThai
+//                FROM lop_mon_hoc lmh
+//                JOIN lop_hoc l ON l.MaLop = lmh.MaLop
+//                JOIN mon_hoc mh ON mh.MaMH = lmh.MaMH
+//                JOIN hoc_ky hk ON hk.MaHK = lmh.MaHK AND hk.MaNH = l.MaNH
+//                JOIN nam_hoc n ON n.MaNH = l.MaNH
+//                ORDER BY n.NgayBatDau DESC, l.TenLop, hk.SoHocKy, mh.TenMon, lmh.MaLMH
+//                """;
+//        return jdbcTemplate.query(sql, (rs, rowNum) ->
+//                new ClassSubjectOptionResponse(
+//                        rs.getLong("MaLMH"), rs.getLong("MaLop"), rs.getString("TenLop"),
+//                        rs.getLong("MaNH"), rs.getString("MaSoNH"), rs.getString("TenMon"),
+//                        rs.getInt("SoHocKy"), rs.getObject("NgayBatDau", java.time.LocalDate.class),
+//                        rs.getObject("NgayKetThuc", java.time.LocalDate.class), rs.getString("TrangThai")));
+//    }
 
     private static final String SELECT_LOP_MON_HOC = """
             SELECT

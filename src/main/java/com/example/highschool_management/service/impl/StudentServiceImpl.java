@@ -1,16 +1,23 @@
 package com.example.highschool_management.service.impl;
 
+import com.example.highschool_management.dao.GuardianDao;
 import com.example.highschool_management.dao.StudentDao;
+import com.example.highschool_management.dao.StudentGuardianDao;
 import com.example.highschool_management.dto.request.CreateStudentRequest;
+import com.example.highschool_management.dto.request.StudentGuardianInputRequest;
 import com.example.highschool_management.dto.request.UpdateStudentRequest;
 import com.example.highschool_management.dto.response.StudentResponse;
 import com.example.highschool_management.mapper.StudentMapper;
+import com.example.highschool_management.model.Guardian;
 import com.example.highschool_management.model.Student;
+import com.example.highschool_management.model.StudentGuardian;
 import com.example.highschool_management.service.StudentService;
 import java.sql.Date;
 import java.time.LocalDate;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
 import lombok.experimental.FieldDefaults;
@@ -25,6 +32,8 @@ public class StudentServiceImpl implements StudentService {
   com.example.highschool_management.security.NguoiDungHienTai nguoiDung;
   StudentDao studentDao;
   StudentMapper studentMapper;
+  GuardianDao guardianDao;
+  StudentGuardianDao studentGuardianDao;
 
   @Override
   public StudentResponse createStudent(CreateStudentRequest request) {
@@ -37,7 +46,74 @@ public class StudentServiceImpl implements StudentService {
       throw new com.example.highschool_management.exception.BusinessException(
           "Số điện thoại đã tồn tại");
     student.setNgayTiepNhan(Date.valueOf(LocalDate.now()));
-    return studentMapper.toResponse(studentDao.insertStudent(student));
+    Student savedStudent = studentDao.insertStudent(student);
+
+    // Xử lý thông tin người giám hộ (nếu có)
+    if (request.getNguoiGiamHo() != null && !request.getNguoiGiamHo().isEmpty()) {
+      Set<Long> linkedGuardians = new HashSet<>();
+      int countLienHeChinh = 0;
+
+      for (StudentGuardianInputRequest gInput : request.getNguoiGiamHo()) {
+        if (Boolean.TRUE.equals(gInput.getLienHeChinh())) {
+          countLienHeChinh++;
+        }
+      }
+      if (countLienHeChinh > 1) {
+        throw new com.example.highschool_management.exception.BusinessException(
+            "Mỗi học sinh chỉ được có tối đa 1 người liên hệ chính");
+      }
+
+      for (StudentGuardianInputRequest gInput : request.getNguoiGiamHo()) {
+        Long resolvedMaNGH = gInput.getMaNGH();
+
+        if (resolvedMaNGH != null && resolvedMaNGH > 0) {
+          final Long idToFind = resolvedMaNGH;
+          Guardian existing = guardianDao.findByMaNGH(idToFind).orElseThrow(
+              () -> new com.example.highschool_management.exception.BusinessException(
+                  "Người giám hộ #" + idToFind + " không tồn tại"));
+          resolvedMaNGH = existing.getMaNGH();
+        } else {
+          // Tạo người giám hộ mới nếu có đủ thông tin họ tên & số điện thoại
+          if (gInput.getHoTen() == null || gInput.getHoTen().trim().isEmpty()) {
+            throw new com.example.highschool_management.exception.BusinessException(
+                "Họ tên người giám hộ không được để trống");
+          }
+          if (gInput.getSdt() == null || gInput.getSdt().trim().isEmpty()) {
+            throw new com.example.highschool_management.exception.BusinessException(
+                "Số điện thoại người giám hộ không được để trống");
+          }
+          if (gInput.getEmail() != null && !gInput.getEmail().isBlank() && guardianDao.existsEmail(gInput.getEmail().trim())) {
+            throw new com.example.highschool_management.exception.BusinessException(
+                "Email người giám hộ '" + gInput.getEmail() + "' đã tồn tại");
+          }
+          if (guardianDao.existsSoDienThoai(gInput.getSdt().trim())) {
+            throw new com.example.highschool_management.exception.BusinessException(
+                "Số điện thoại người giám hộ '" + gInput.getSdt() + "' đã tồn tại");
+          }
+
+          Guardian newG = new Guardian();
+          newG.setHoTen(gInput.getHoTen().trim());
+          newG.setSdt(gInput.getSdt().trim());
+          newG.setEmail(gInput.getEmail() != null && !gInput.getEmail().isBlank() ? gInput.getEmail().trim() : null);
+          newG.setDiaChi(gInput.getDiaChi() != null && !gInput.getDiaChi().isBlank() ? gInput.getDiaChi().trim() : null);
+          Guardian inserted = guardianDao.insertGuardian(newG);
+          resolvedMaNGH = inserted.getMaNGH();
+        }
+
+        if (linkedGuardians.contains(resolvedMaNGH)) {
+          throw new com.example.highschool_management.exception.BusinessException(
+              "Không thể tạo liên kết trùng lặp với cùng một người giám hộ (#" + resolvedMaNGH + ")");
+        }
+        linkedGuardians.add(resolvedMaNGH);
+
+        String mqh = gInput.getMoiQuanHe() != null && !gInput.getMoiQuanHe().trim().isEmpty()
+            ? gInput.getMoiQuanHe().trim() : "Người thân";
+        StudentGuardian sg = new StudentGuardian(savedStudent.getMaHS(), resolvedMaNGH, mqh, Boolean.TRUE.equals(gInput.getLienHeChinh()));
+        studentGuardianDao.link(sg);
+      }
+    }
+
+    return studentMapper.toResponse(savedStudent);
   }
 
   @Override

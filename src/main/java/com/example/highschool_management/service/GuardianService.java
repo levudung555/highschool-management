@@ -4,6 +4,7 @@ import com.example.highschool_management.dto.request.CreateGuardianRequest;
 import com.example.highschool_management.dto.request.LinkGuardianRequest;
 import com.example.highschool_management.dto.request.UpdateGuardianRequest;
 import com.example.highschool_management.dto.response.GuardianResponse;
+import com.example.highschool_management.dto.response.StudentOfGuardianResponse;
 
 import java.util.List;
 
@@ -16,4 +17,5 @@ public interface GuardianService {
     boolean linkGuardian(LinkGuardianRequest request);
     boolean unlinkGuardian(Long maHS, Long maNGH);
     List<GuardianResponse> getGuardiansByStudent(Long maHS);
+    List<StudentOfGuardianResponse> getStudentsByGuardian(Long maNGH);
 }

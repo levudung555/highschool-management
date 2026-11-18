@@ -1,6 +1,7 @@
 package com.example.highschool_management.dto.request;
 
 import com.example.highschool_management.enums.SexEnum;
+import jakarta.validation.Valid;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
@@ -8,6 +9,7 @@ import lombok.Getter;
 import lombok.Setter;
 
 import java.sql.Date;
+import java.util.List;
 
 @Getter
 @Setter
@@ -22,4 +24,8 @@ public class CreateStudentRequest {
     String sdt;
     @Email
     String email;
+
+    // Danh sách người giám hộ kèm theo (tùy chọn)
+    @Valid
+    List<StudentGuardianInputRequest> nguoiGiamHo;
 }

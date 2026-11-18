@@ -228,18 +228,130 @@ function drawRows(type) {
 }
 
 // 4. Thêm / sửa: trình duyệt validate trước, backend kiểm tra ràng buộc cuối cùng.
-function editProfile(type, row = null) {
+let cachedGuardians = [];
+
+async function editProfile(type, row = null) {
   state.editing = { type, row };
   $("profile-form").reset();
   $("profile-error").classList.add("d-none");
   $("profile-title").textContent =
     `${row ? "Chỉnh sửa" : "Thêm"} ${profiles[type].singular}`;
   $("profile-fields").innerHTML = profileFields(type);
-  if (row)
+  if (row) {
     profiles[type].fields.forEach(([name]) => {
       $(`profile-${name}`).value = row[name] || "";
     });
+  }
+
+  // Nếu là form THÊM MỚI HỌC SINH -> hiển thị thêm khu vực Người giám hộ
+  if (type === "students" && !row) {
+    try {
+      cachedGuardians = await request("/guardian");
+    } catch (e) {
+      cachedGuardians = [];
+    }
+    const guardianSectionHtml = `
+      <div class="col-12 mt-4 pt-3 border-top">
+        <div class="d-flex justify-content-between align-items-center mb-2">
+          <div>
+            <h5 class="mb-0 fs-6">Thông tin người giám hộ (Tùy chọn)</h5>
+            <small class="text-secondary">Có thể chọn người giám hộ đã có hoặc nhập người mới.</small>
+          </div>
+          <button type="button" class="btn btn-sm btn-outline-primary" id="btn-add-student-guardian">
+            ＋ Thêm người giám hộ
+          </button>
+        </div>
+        <div id="student-guardians-container" class="d-flex flex-column gap-3"></div>
+      </div>
+    `;
+    $("profile-fields").insertAdjacentHTML("beforeend", guardianSectionHtml);
+    $("btn-add-student-guardian").onclick = () => addGuardianInputRow();
+  }
+
   showModal("profileModal");
+}
+
+function addGuardianInputRow() {
+  const container = $("student-guardians-container");
+  const rowIndex = container.children.length;
+  const guardianOptions = cachedGuardians
+    .map(g => `<option value="${g.maNGH}">${escapeHtml(g.hoTen)} · ${escapeHtml(g.sdt || "")}</option>`)
+    .join("");
+
+  const rowHtml = `
+    <div class="card p-3 border shadow-none bg-light guardian-input-row" data-index="${rowIndex}">
+      <div class="d-flex justify-content-between align-items-center mb-2">
+        <strong>Người giám hộ #${rowIndex + 1}</strong>
+        <button type="button" class="btn btn-sm btn-link text-danger p-0 btn-remove-guardian-row">Xóa</button>
+      </div>
+      <div class="row g-2 mb-2">
+        <div class="col-md-6">
+          <label class="form-label small">Chọn người đã có trong hệ thống</label>
+          <select class="form-select form-select-sm sel-existing-guardian">
+            <option value="">-- Nhập người mới hoặc chọn người có sẵn --</option>
+            ${guardianOptions}
+          </select>
+        </div>
+        <div class="col-md-3">
+          <label class="form-label small">Quan hệ với học sinh <span class="text-danger">*</span></label>
+          <select class="form-select form-select-sm sel-guardian-rel">
+            <option value="Bố">Bố</option>
+            <option value="Mẹ">Mẹ</option>
+            <option value="Ông">Ông</option>
+            <option value="Bà">Bà</option>
+            <option value="Người thân khác">Người thân khác</option>
+          </select>
+        </div>
+        <div class="col-md-3 d-flex align-items-end pb-1">
+          <div class="form-check">
+            <input class="form-check-input chk-primary-guardian" type="checkbox" id="chk-prim-${rowIndex}">
+            <label class="form-check-label small" for="chk-prim-${rowIndex}">Liên hệ chính</label>
+          </div>
+        </div>
+      </div>
+      <div class="row g-2 new-guardian-fields">
+        <div class="col-md-4">
+          <input type="text" class="form-control form-control-sm inp-g-name" placeholder="Họ và tên *" maxlength="150">
+        </div>
+        <div class="col-md-4">
+          <input type="tel" class="form-control form-control-sm inp-g-phone" placeholder="Số điện thoại *" maxlength="20">
+        </div>
+        <div class="col-md-4">
+          <input type="email" class="form-control form-control-sm inp-g-email" placeholder="Email (tùy chọn)" maxlength="254">
+        </div>
+        <div class="col-12 mt-1">
+          <input type="text" class="form-control form-control-sm inp-g-address" placeholder="Địa chỉ (tùy chọn)" maxlength="500">
+        </div>
+      </div>
+    </div>
+  `;
+  container.insertAdjacentHTML("beforeend", rowHtml);
+
+  // Tự động cuộn xuống dòng người giám hộ vừa thêm
+  container.scrollTop = container.scrollHeight;
+
+  const newRow = container.lastElementChild;
+  newRow.querySelector(".btn-remove-guardian-row").onclick = () => newRow.remove();
+
+  // Đảm bảo chỉ 1 người liên hệ chính
+  const chk = newRow.querySelector(".chk-primary-guardian");
+  chk.onchange = () => {
+    if (chk.checked) {
+      container.querySelectorAll(".chk-primary-guardian").forEach(c => {
+        if (c !== chk) c.checked = false;
+      });
+    }
+  };
+
+  const selExisting = newRow.querySelector(".sel-existing-guardian");
+  const newFieldsDiv = newRow.querySelector(".new-guardian-fields");
+  selExisting.onchange = () => {
+    if (selExisting.value) {
+      newFieldsDiv.classList.add("d-none");
+    } else {
+      newFieldsDiv.classList.remove("d-none");
+    }
+  };
 }
 
 async function saveProfile(event) {
@@ -254,6 +366,57 @@ async function saveProfile(event) {
         body[key] = body[key].trim();
         if (!body[key]) body[key] = null;
       });
+
+      // Nếu là tạo mới học sinh và có nhập người giám hộ
+      if (type === "students" && !row) {
+        const guardianRows = document.querySelectorAll(".guardian-input-row");
+        const nguoiGiamHoList = [];
+        let hasError = false;
+
+        guardianRows.forEach((r, idx) => {
+          const maNGHVal = r.querySelector(".sel-existing-guardian").value;
+          const moiQuanHe = r.querySelector(".sel-guardian-rel").value;
+          const lienHeChinh = r.querySelector(".chk-primary-guardian").checked;
+
+          if (maNGHVal) {
+            nguoiGiamHoList.push({
+              maNGH: Number(maNGHVal),
+              moiQuanHe,
+              lienHeChinh
+            });
+          } else {
+            const hoTen = r.querySelector(".inp-g-name").value.trim();
+            const sdt = r.querySelector(".inp-g-phone").value.trim();
+            const email = r.querySelector(".inp-g-email").value.trim();
+            const diaChi = r.querySelector(".inp-g-address").value.trim();
+
+            if (!hoTen && !sdt && !email && !diaChi) {
+              // Bỏ qua dòng trống
+              return;
+            }
+            if (!hoTen || !sdt) {
+              showError("profile-error", new Error(`Người giám hộ #${idx + 1} cần có đầy đủ Họ tên và Số điện thoại`));
+              hasError = true;
+              return;
+            }
+
+            nguoiGiamHoList.push({
+              hoTen,
+              sdt,
+              email: email || null,
+              diaChi: diaChi || null,
+              moiQuanHe,
+              lienHeChinh
+            });
+          }
+        });
+
+        if (hasError) return;
+        if (nguoiGiamHoList.length) {
+          body.nguoiGiamHo = nguoiGiamHoList;
+        }
+      }
+
       await request(config.endpoint + (row ? `/${row[config.id]}` : ""), {
         method: row ? "PUT" : "POST",
         body: JSON.stringify(body),
@@ -300,6 +463,97 @@ async function detail(type, row, reopen = true) {
     .join("");
   $("profile-detail-body").innerHTML =
     `<dl class="detail-grid">${details}</dl>`;
+  // Nếu là xem chi tiết NGƯỜI GIÁM HỘ (guardians)
+  if (type === "guardians") {
+    state.detailGuardian = row;
+    try {
+      const [wardStudents, allStudents] = await Promise.all([
+        request(`/guardian/${row.maNGH}/students`),
+        request("/student")
+      ]);
+      $("profile-detail-body").insertAdjacentHTML(
+        "beforeend",
+        `
+        <div class="guardian-heading mt-4"><h3>Danh sách học sinh được giám hộ</h3></div>
+        <div id="guardian-ward-error" class="alert alert-danger d-none" role="alert"></div>
+        <div class="guardian-list">
+          ${wardStudents.length ? wardStudents.map(st => `
+            <article>
+              <div>
+                <strong>${escapeHtml(st.hoTen)}</strong> <span class="badge bg-secondary ms-1">${escapeHtml(st.maSoHS || '')}</span>
+                <p>Quan hệ: <strong>${escapeHtml(st.moiQuanHe || 'Người thân')}</strong> ${st.lienHeChinh ? '· <span class="text-success font-weight-bold">Liên hệ chính</span>' : ''} · Ngày sinh: ${formatDate(st.ngaySinh)}</p>
+              </div>
+              <button class="btn btn-light text-danger btn-sm" data-ward-unlink="${st.maHS}" data-guardian-id="${row.maNGH}">Gỡ liên kết</button>
+            </article>
+          `).join("") : '<p class="text-secondary">Chưa có học sinh nào liên kết với người giám hộ này.</p>'}
+        </div>
+        <form id="ward-link-form" class="guardian-link-form mt-3 pt-3 border-top">
+          <h4>Thêm / cập nhật học sinh được giám hộ</h4>
+          <div class="row g-3">
+            <div class="col-md-6">
+              <label for="ward-student-select" class="form-label">Chọn học sinh *</label>
+              <select class="form-select" id="ward-student-select" name="maHS" required>
+                <option value="">-- Chọn học sinh --</option>
+                ${allStudents.map(s => `<option value="${s.maHS}">${escapeHtml(s.hoTen)} · ${escapeHtml(s.maSoHS || '')}</option>`).join("")}
+              </select>
+            </div>
+            <div class="col-md-3">
+              <label for="ward-relationship" class="form-label">Mối quan hệ *</label>
+              <select class="form-select" id="ward-relationship" name="moiQuanHe" required>
+                <option value="Bố">Bố</option>
+                <option value="Mẹ">Mẹ</option>
+                <option value="Ông">Ông</option>
+                <option value="Bà">Bà</option>
+                <option value="Người thân khác">Người thân khác</option>
+              </select>
+            </div>
+            <div class="col-md-3 d-flex align-items-end pb-2">
+              <div class="form-check">
+                <input type="checkbox" name="lienHeChinh" id="ward-primary" class="form-check-input">
+                <label class="form-check-label" for="ward-primary">Liên hệ chính</label>
+              </div>
+            </div>
+          </div>
+          <button class="btn btn-primary mt-3" type="submit">Lưu liên kết</button>
+        </form>
+        `
+      );
+
+      $("ward-student-select").onchange = (event) => {
+        const found = wardStudents.find(w => w.maHS == event.target.value);
+        if (found) {
+          $("ward-relationship").value = found.moiQuanHe || "Bố";
+          $("ward-primary").checked = Boolean(found.lienHeChinh);
+        }
+      };
+
+      $("ward-link-form").onsubmit = async (event) => {
+        event.preventDefault();
+        await withButton(event.submitter, async () => {
+          try {
+            const form = event.target;
+            await request("/guardian/link", {
+              method: "POST",
+              body: JSON.stringify({
+                maHS: Number(form.elements.maHS.value),
+                maNGH: row.maNGH,
+                moiQuanHe: form.elements.moiQuanHe.value.trim(),
+                lienHeChinh: form.elements.lienHeChinh.checked
+              })
+            });
+            await detail("guardians", row, false);
+            notify("Đã liên kết học sinh thành công.");
+          } catch (err) {
+            showError("guardian-ward-error", err);
+          }
+        });
+      };
+    } catch (err) {
+      $("profile-detail-body").insertAdjacentHTML("beforeend", `<p class="text-danger">${escapeHtml(err.message)}</p>`);
+    }
+    return;
+  }
+
   if (type !== "students") return;
   state.detailStudent = row;
   try {
@@ -414,6 +668,26 @@ function bindEvents() {
       }
       return;
     }
+    const wardUnlink = event.target.closest("[data-ward-unlink]");
+    if (wardUnlink) {
+      wardUnlink.disabled = true;
+      try {
+        await request(
+          "/guardian/unlink?" +
+            query({
+              maHS: wardUnlink.dataset.wardUnlink,
+              maNGH: wardUnlink.dataset.guardianId,
+            }),
+          { method: "DELETE" },
+        );
+        await detail("guardians", state.detailGuardian, false);
+        notify("Đã gỡ liên kết học sinh.");
+      } catch (error) {
+        wardUnlink.disabled = false;
+        showError("guardian-ward-error", error);
+      }
+      return;
+    }
     const button = event.target.closest("[data-profile-action]");
     if (!button) return;
     const { type, id, profileAction: action } = button.dataset,
@@ -423,7 +697,7 @@ function bindEvents() {
     if (action === "detail") return detail(type, row);
     if (action === "delete")
       return confirm(
-        `Xóa hồ sơ ${row.hoTen}? Chỉ xóa khi không có dữ liệu nghiệp vụ liên quan.${type === "guardians" ? " Các liên kết người giám hộ với học sinh cũng được gỡ." : ""}`,
+        `Xóa hồ sơ ${row.hoTen}? Chỉ xóa khi không có dữ liệu nghiệp vụ liên quan.${type === "guardians" ? " Người giám hộ phải không còn liên kết với học sinh nào." : ""}`,
         async () => {
           await request(config.endpoint + "?" + query({ [config.id]: id }), {
             method: "DELETE",

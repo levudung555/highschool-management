@@ -4,6 +4,7 @@ import com.example.highschool_management.dto.request.CreateGuardianRequest;
 import com.example.highschool_management.dto.request.LinkGuardianRequest;
 import com.example.highschool_management.dto.request.UpdateGuardianRequest;
 import com.example.highschool_management.dto.response.GuardianResponse;
+import com.example.highschool_management.dto.response.StudentOfGuardianResponse;
 import com.example.highschool_management.service.GuardianService;
 import jakarta.validation.Valid;
 import lombok.AccessLevel;
@@ -59,5 +60,10 @@ public class GuardianController {
     @GetMapping("/student/{maHS}")
     public List<GuardianResponse> getGuardiansByStudent(@PathVariable Long maHS) {
         return guardianService.getGuardiansByStudent(maHS);
+    }
+
+    @GetMapping("/{maNGH}/students")
+    public List<StudentOfGuardianResponse> getStudentsByGuardian(@PathVariable Long maNGH) {
+        return guardianService.getStudentsByGuardian(maNGH);
     }
 }
