@@ -143,7 +143,7 @@ public class AttendanceDaoImpl implements AttendanceDao {
         String sqlCN = """
             SELECT DISTINCT l.MaLop, l.TenLop, l.MaNH,
                    CONCAT(YEAR(n.NgayBatDau), '-', YEAR(n.NgayKetThuc)) AS NamHoc,
-                   l.MaKhoi, k.SoKhoi
+                   l.MaKhoi, k.SoKhoi, n.NgayBatDau
             FROM phan_cong_chu_nhiem pccn
             JOIN lop_hoc l ON l.MaLop = pccn.MaLop
             JOIN nam_hoc n ON n.MaNH = l.MaNH
@@ -172,7 +172,7 @@ public class AttendanceDaoImpl implements AttendanceDao {
         String sqlBM = """
             SELECT DISTINCT l.MaLop, l.TenLop, l.MaNH,
                    CONCAT(YEAR(n.NgayBatDau), '-', YEAR(n.NgayKetThuc)) AS NamHoc,
-                   l.MaKhoi, k.SoKhoi,
+                   l.MaKhoi, k.SoKhoi, n.NgayBatDau,
                    lmh.MaLMH, mh.TenMon
             FROM phan_cong_giang_day pcgd
             JOIN lop_mon_hoc lmh ON lmh.MaLMH = pcgd.MaLMH

@@ -95,7 +95,7 @@ public class HomeroomAssignmentServiceImpl implements HomeroomAssignmentService 
         if (giaoVien.isEmpty()) {
             throw new ResourceNotFoundException("Không tìm thấy giáo viên có mã: " + maGiaoVien);
         }
-        if (giaoVien.get().getTrangThai().equals("NGHI_VIEC")) {
+        if (giaoVien.get().getTrangThai().equals("NGUNG_CONG_TAC")) {
             throw new BusinessException("Giáo viên không hoạt động");
         }
 

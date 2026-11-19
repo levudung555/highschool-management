@@ -16,4 +16,5 @@ public interface StudentGuardianDao {
     void resetLienHeChinh(Long maHS);
     boolean deleteByMaNGHs(List<Long> maNGHs);
     boolean deleteByMaHSs(List<Long> maHSs);
+    List<Long> findGuardianIdsByMaHSs(List<Long> maHSs);
 }
