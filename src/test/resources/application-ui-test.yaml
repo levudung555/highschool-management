@@ -1,0 +1,13 @@
+# Chỉ để kiểm tra giao diện bằng H2, không chạm MySQL.
+server:
+  port: 18089
+spring:
+  datasource:
+    url: jdbc:h2:mem:ui_preview;MODE=MySQL;DB_CLOSE_DELAY=-1
+    driver-class-name: org.h2.Driver
+    username: sa
+    password: ''
+  sql:
+    init:
+      mode: always
+      schema-locations: classpath:uc09-schema.sql
