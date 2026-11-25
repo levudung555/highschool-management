@@ -6,13 +6,13 @@ import java.util.List;
 import java.util.Optional;
 
 public interface TeacherDao {
-    Teacher insertTeacher(Teacher teacher);
-    boolean updateTeacher(Teacher teacher);
+    List<Teacher> findAll();
+    Optional<Teacher> findByMaGV(Long maGV);
     boolean existsSoDienThoai(String soDienThoai);
     boolean existsEmail(String email);
     String getLastMaSoGV();
-    Optional<Teacher> findByMaGV(Long maGV);
-    boolean deleteTeachers(List<Long> maGV);
+    Teacher insertTeacher(Teacher teacher);
+    boolean updateTeacher(Teacher teacher);
     List<Long> findExistingIds(List<Long> maGV);
-    List<Teacher> findAll();
+    boolean deleteTeachers(List<Long> maGV);
 }

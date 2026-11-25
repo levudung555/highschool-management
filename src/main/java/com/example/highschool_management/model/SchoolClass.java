@@ -12,6 +12,10 @@ public class SchoolClass {
   private Long maKhoi;
   private String tenLop;
   private String trangThai;
+  private Long maToHop;
+  private Integer siSoToiDa;
+  private Integer thuTuXep;
+
 
   public SchoolClass() {}
 
@@ -53,5 +57,29 @@ public class SchoolClass {
 
   public void setTrangThai(String trangThai) {
     this.trangThai = trangThai;
+  }
+
+  public Long getMaToHop() {
+    return maToHop;
+  }
+
+  public void setMaToHop(Long maToHop) {
+    this.maToHop = maToHop;
+  }
+
+  public Integer getSiSoToiDa() {
+    return siSoToiDa;
+  }
+
+  public void setSiSoToiDa(Integer siSoToiDa) {
+    this.siSoToiDa = siSoToiDa;
+  }
+
+  public Integer getThuTuXep() {
+    return thuTuXep;
+  }
+
+  public void setThuTuXep(Integer thuTuXep) {
+    this.thuTuXep = thuTuXep;
   }
 }

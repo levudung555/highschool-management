@@ -132,7 +132,7 @@ export const homePage = `
         <a class="work-link" href="#students"><span class="work-number">01</span><div><strong>Hồ sơ & tìm kiếm học sinh</strong><small>Thêm hồ sơ, lọc lớp/khối/năm học, quản lý người giám hộ</small></div><span>↗</span></a>
         <a class="work-link" href="#teachers"><span class="work-number">02</span><div><strong>Đội ngũ giáo viên</strong><small>Cập nhật chuyên môn và tình trạng công tác</small></div><span>↗</span></a>
         <a class="work-link" href="#classes"><span class="work-number">03</span><div><strong>Tổ chức lớp học</strong><small>Quản lý lớp, danh sách và sĩ số thực tế</small></div><span>↗</span></a>
-        <a class="work-link" href="#requests"><span class="work-number">04</span><div><strong>Xếp lớp & phê duyệt</strong><small>Tạo yêu cầu, duyệt chuyển lớp và lưu lịch sử</small></div><span>↗</span></a>
+        <a class="work-link" href="#requests"><span class="work-number">04</span><div><strong>Xếp lớp & chuyển lớp</strong><small>Xếp lớp đầu năm, chuyển lớp và tra cứu lịch sử</small></div><span>↗</span></a>
       </article>
       <article class="section-card home-guide"><span class="eyebrow">QUY TRÌNH HỌC VỤ</span><h2>Từ hồ sơ đến lớp học</h2><ol><li><strong>Tiếp nhận hồ sơ</strong><p>Nhập thông tin học sinh và kết nối người giám hộ.</p></li><li><strong>Gửi yêu cầu xếp lớp</strong><p>Chọn lớp, năm học và ngày bắt đầu phù hợp.</p></li><li><strong>Phê duyệt & theo dõi</strong><p>BGH/Admin duyệt; danh sách lớp cập nhật theo ngày hiệu lực.</p></li></ol><a class="btn btn-outline-primary" href="#requests">Mở yêu cầu & phê duyệt →</a></article>
     </div>
@@ -140,11 +140,11 @@ export const homePage = `
 
 export const profileModals = `
   <!-- Thêm / sửa hồ sơ: nội dung trường được khai báo trong profiles. -->
-  <div class="modal fade" id="profileModal" tabindex="-1" aria-labelledby="profile-title" aria-hidden="true"><div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable"><div class="modal-content">
-    <form id="profile-form"><div class="modal-header"><h2 class="modal-title fs-5" id="profile-title"></h2><button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Đóng"></button></div>
+  <div class="modal fade" id="profileModal" tabindex="-1" aria-labelledby="profile-title" aria-hidden="true"><div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
+    <form id="profile-form" class="modal-content"><div class="modal-header"><h2 class="modal-title fs-5" id="profile-title"></h2><button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Đóng"></button></div>
       <div class="modal-body"><div class="alert alert-danger d-none" id="profile-error" role="alert"></div><p class="small text-secondary">Các trường có dấu <span class="text-danger">*</span> là bắt buộc. Mã hồ sơ được hệ thống cấp.</p><div class="row g-3" id="profile-fields"></div></div>
       <div class="modal-footer"><button type="button" class="btn btn-light" data-bs-dismiss="modal">Hủy</button><button type="submit" class="btn btn-primary" id="profile-save">Lưu hồ sơ</button></div>
-    </form></div></div></div>
+    </form></div></div>
   <!-- Chi tiết học sinh và liên kết người giám hộ. -->
   <div class="modal fade" id="profileDetailModal" tabindex="-1" aria-labelledby="profile-detail-title" aria-hidden="true"><div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable"><div class="modal-content">
     <div class="modal-header"><h2 class="modal-title fs-5" id="profile-detail-title">Chi tiết hồ sơ</h2><button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Đóng"></button></div><div class="modal-body" id="profile-detail-body"></div><div class="modal-footer"><button class="btn btn-light" data-bs-dismiss="modal">Đóng</button></div>

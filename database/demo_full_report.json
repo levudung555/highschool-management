@@ -1,0 +1,51 @@
+{
+  "applied": true,
+  "rows_added": {
+    "vai_tro": 1,
+    "tai_khoan": 15,
+    "tai_khoan_vai_tro": 15,
+    "hoc_ky": 4,
+    "mon_hoc": 8,
+    "giao_vien": 30,
+    "lop_hoc": 21,
+    "phan_cong_chu_nhiem": 19,
+    "lop_mon_hoc": 320,
+    "phan_cong_giang_day": 281,
+    "hoc_sinh": 330,
+    "nguoi_giam_ho": 396,
+    "hs_nguoi_giam_ho": 396,
+    "xep_lop": 512,
+    "phien_diem_danh": 348,
+    "diem_danh": 8700,
+    "ket_qua_mon": 2100,
+    "lan_danh_gia": 7500,
+    "tong_ket_hoc_ky": 400,
+    "tong_ket_nam": 200,
+    "nhat_ky_he_thong": 1
+  },
+  "total_rows": 21597,
+  "accounts": [
+    "demofull26_admin",
+    "demofull26_giaovu",
+    "demofull26_bgh",
+    "demofull26_gv01",
+    "demofull26_gv02",
+    "demofull26_gv03",
+    "demofull26_gv04",
+    "demofull26_gv05",
+    "demofull26_gv06",
+    "demofull26_gv07",
+    "demofull26_gv08",
+    "demofull26_gv09",
+    "demofull26_gv10",
+    "demofull26_gv11",
+    "demofull26_gv12"
+  ],
+  "validation": [
+    "enrollment overlaps",
+    "attendance membership",
+    "assessment assignment",
+    "phan_cong_chu_nhiem overlaps",
+    "phan_cong_giang_day overlaps"
+  ]
+}

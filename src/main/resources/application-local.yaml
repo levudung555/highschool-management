@@ -1,0 +1,8 @@
+# Demo trên máy cá nhân: chạy với --spring.profiles.active=local.
+server:
+  address: 127.0.0.1
+spring:
+  sql:
+    init:
+      mode: always
+      schema-locations: classpath:db/local/uc09-demo.sql
