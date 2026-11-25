@@ -1,8 +1,8 @@
 -- Sample data for hoc_sinh
-INSERT INTO hoc_sinh (MaSoHS, HoTen, NgaySinh, GioiTinh, DiaChi, SoDienThoai, NgayTiepNhan, CMMD, NgayCapNhat, DiemDauVao)
+INSERT INTO hoc_sinh (MaSoHS, HoTen, NgaySinh, GioiTinh, DiaChi, SoDienThoai, NgayTiepNhan, CMMD, NgayCapNhat)
 VALUES 
-('HS0001', 'Nguyễn Văn An', '2008-05-15', 'NAM', '123 Nguyễn Trãi, Hà Nội', '0912345671', '2023-09-05', '000000000001', CURRENT_TIMESTAMP, 8.50),
-('HS0002', 'Trần Thị Bình', '2008-08-20', 'NU', '456 Lê Lợi, Hà Nội', '0912345672', '2023-09-05', '000000000002', CURRENT_TIMESTAMP, 7.75);
+('HS0001', 'Nguyễn Văn An', '2008-05-15', 'NAM', '123 Nguyễn Trãi, Hà Nội', '0912345671', '2023-09-05', '000000000001', CURRENT_TIMESTAMP),
+('HS0002', 'Trần Thị Bình', '2008-08-20', 'NU', '456 Lê Lợi, Hà Nội', '0912345672', '2023-09-05', '000000000002', CURRENT_TIMESTAMP);
 
 -- Sample data for giao_vien
 INSERT INTO giao_vien (MaSoGV, HoTen, NgaySinh, SoDienThoai, Email, ChuyenMon, TrangThai)

@@ -4,7 +4,6 @@ import static org.junit.jupiter.api.Assertions.*;
 
 import com.example.highschool_management.enums.SexEnum;
 import com.example.highschool_management.model.Student;
-import java.math.BigDecimal;
 import java.sql.Date;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -29,13 +28,11 @@ class JdbcStudentDaoTest {
     student.setNgayTiepNhan(Date.valueOf("2026-09-01"));
     student.setGioiTinh(SexEnum.NU);
     student.setCmnd("000000000002");
-    student.setDiemDauVao(new BigDecimal("24.75"));
-
     dao.insertStudent(student);
 
     assertTrue(dao.existsCCCD(student.getCmnd()));
-    assertEquals(student.getDiemDauVao(), jdbc.queryForObject(
-        "SELECT DiemDauVao FROM hoc_sinh WHERE MaHS=? AND NgayCapNhat IS NOT NULL",
-        BigDecimal.class, student.getMaHS()));
+    assertEquals(student.getMaSoHS(), jdbc.queryForObject(
+        "SELECT MaSoHS FROM hoc_sinh WHERE MaHS=? AND NgayCapNhat IS NOT NULL",
+        String.class, student.getMaHS()));
   }
 }

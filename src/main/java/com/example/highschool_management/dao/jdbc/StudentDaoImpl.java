@@ -21,7 +21,7 @@ public class StudentDaoImpl implements StudentDao {
   public Student insertStudent(Student student) {
     String sql =
         "INSERT INTO hoc_sinh (MaSoHS, HoTen, NgaySinh, GioiTinh, DiaChi, SoDienThoai,"
-            + " NgayTiepNhan, CMMD, DiemDauVao, NgayCapNhat) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)";
+            + " NgayTiepNhan, CMMD, NgayCapNhat) VALUES (?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)";
     try (Connection conn = JdbcConnect.getConnection();
         PreparedStatement ps = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
       ps.setString(1, student.getMaSoHS());
@@ -31,8 +31,7 @@ public class StudentDaoImpl implements StudentDao {
       ps.setString(5, student.getDiaChi());
       ps.setString(6, student.getSdt());
       ps.setDate(7, student.getNgayTiepNhan());
-      ps.setString(8, student.getCmnd());
-      ps.setBigDecimal(9, student.getDiemDauVao());
+      ps.setString(8, student.getCmnd() != null && !student.getCmnd().isBlank() ? student.getCmnd() : "");
       ps.executeUpdate();
       try (var rs = ps.getGeneratedKeys()) {
         if (rs.next()) {
@@ -41,7 +40,11 @@ public class StudentDaoImpl implements StudentDao {
       }
       return student;
     } catch (Exception e) {
-      throw new RuntimeException("Lỗi khi thêm học sinh", e);
+      String detail = e.getMessage();
+      if (e.getCause() != null && e.getCause().getMessage() != null) {
+        detail += " (" + e.getCause().getMessage() + ")";
+      }
+      throw new RuntimeException("Lỗi khi thêm học sinh: " + detail, e);
     }
   }
 
@@ -123,7 +126,11 @@ public class StudentDaoImpl implements StudentDao {
           student.setGioiTinh(SexEnum.valueOf(rs.getString("GioiTinh")));
           student.setDiaChi(rs.getString("DiaChi"));
           student.setSdt(rs.getString("SoDienThoai"));
+          student.setCmnd(rs.getString("CMMD"));
           student.setNgayTiepNhan(rs.getDate("NgayTiepNhan"));
+          var ngayCapNhat = rs.getTimestamp("NgayCapNhat");
+          student.setNgayCapNhat(
+              ngayCapNhat == null ? null : ngayCapNhat.toLocalDateTime());
 
           return Optional.of(student);
         }

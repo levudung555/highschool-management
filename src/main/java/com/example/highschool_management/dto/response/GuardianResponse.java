@@ -10,6 +10,7 @@ import lombok.Setter;
 public class GuardianResponse {
     Long maNGH;
     String hoTen;
+    String cmnd;
     String sdt;
     String diaChi;
     String moiQuanHe;

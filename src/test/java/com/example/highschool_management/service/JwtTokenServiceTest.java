@@ -43,7 +43,7 @@ class JwtTokenServiceTest {
         User.builder()
             .username("admin")
             .password("hash")
-            .roles(Set.of(new Role("ADMIN"), new Role("TEACHER")))
+            .roles(Set.of(new Role("ADMIN"), new Role("GIAO_VIEN")))
             .build();
     String token = jwtTokenService.generateAuthToken(user, 3600L);
 
@@ -52,7 +52,7 @@ class JwtTokenServiceTest {
     assertEquals("admin", signedJwt.getJWTClaimsSet().getSubject());
     assertEquals("highschool-management", signedJwt.getJWTClaimsSet().getIssuer());
     assertTrue(signedJwt.getJWTClaimsSet().getStringClaim("scope").contains("ROLE_ADMIN"));
-    assertTrue(signedJwt.getJWTClaimsSet().getStringClaim("scope").contains("ROLE_TEACHER"));
+    assertTrue(signedJwt.getJWTClaimsSet().getStringClaim("scope").contains("ROLE_GIAO_VIEN"));
   }
 
   @Test

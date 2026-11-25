@@ -152,6 +152,13 @@ public class EnrollmentDaoImpl implements EnrollmentDao {
                 JOIN hoc_sinh hs ON hs.MaHS = hsnh.MaHS
                 JOIN to_hop_mon th ON th.MaToHop = hsnh.MaToHop
                 WHERE hsnh.MaNH = ?
+                  AND NOT EXISTS (
+                      SELECT 1
+                      FROM xep_lop xl
+                      JOIN lop_hoc lop ON lop.MaLop = xl.MaLop
+                      WHERE xl.MaHS = hs.MaHS
+                        AND lop.MaNH = hsnh.MaNH
+                  )
                 ORDER BY th.KyHieu, hsnh.TongDiemDauVao DESC, hs.MaHS
                 """;
         return jdbc.query(sql, (rs, rowNum) -> new Grade10PlacementCandidate(

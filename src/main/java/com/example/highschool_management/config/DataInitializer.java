@@ -41,7 +41,6 @@ public class DataInitializer {
                 createRoleIfNotExists("BGH", "Ban Giám hiệu");
                 createRoleIfNotExists("GIAO_VU", "Giáo vụ");
                 createRoleIfNotExists("GIAO_VIEN", "Giáo viên");
-                createRoleIfNotExists("TEACHER", "Giáo viên");
                 createRoleIfNotExists("STUDENT", "Học sinh");
 
                 createAdminIfNotExists();

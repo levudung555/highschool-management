@@ -5,8 +5,8 @@ import lombok.Getter;
 import lombok.Setter;
 import lombok.experimental.FieldDefaults;
 
-import java.math.BigDecimal;
 import java.sql.Date;
+import java.time.LocalDateTime;
 
 @FieldDefaults(level = lombok.AccessLevel.PRIVATE)
 @Getter
@@ -21,6 +21,5 @@ public class Student {
     String sdt;
     String cmnd;
     Date ngayTiepNhan;
-    Date ngayCapNhat;
-    BigDecimal diemDauVao;
+    LocalDateTime ngayCapNhat;
 }

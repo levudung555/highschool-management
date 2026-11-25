@@ -41,6 +41,7 @@ class StudentExcelImporterTest {
       header.createCell(4).setCellValue("Số điện thoại");
       header.createCell(5).setCellValue("CCCD");
       header.createCell(6).setCellValue("Điểm đầu vào");
+      header.createCell(7).setCellValue("Tổ hợp");
 
       // Row 1: Student 1
       Row row1 = sheet.createRow(1);
@@ -51,6 +52,7 @@ class StudentExcelImporterTest {
       row1.createCell(4).setCellValue("0912345678");
       row1.createCell(5).setCellValue("001208001234");
       row1.createCell(6).setCellValue(8.5);
+      row1.createCell(7).setCellValue(1);
 
       // Row 2: Student 2
       Row row2 = sheet.createRow(2);
@@ -61,6 +63,7 @@ class StudentExcelImporterTest {
       row2.createCell(4).setCellValue("0987654321");
       row2.createCell(5).setCellValue("001208005678");
       row2.createCell(6).setCellValue("9,25");
+      row2.createCell(7).setCellValue(2);
 
       ByteArrayOutputStream out = new ByteArrayOutputStream();
       workbook.write(out);
@@ -88,7 +91,8 @@ class StudentExcelImporterTest {
     assertEquals("Hà Nội", req1.getDiaChi());
     assertEquals("0912345678", req1.getSdt());
     assertEquals("001208001234", req1.getCmnd());
-    assertEquals(new BigDecimal("8.5"), req1.getDiemDauVao());
+    assertEquals(new BigDecimal("8.5"), result.getStudents().get(0).getTongDiemDauVao());
+    assertEquals(1, result.getStudents().get(0).getThuTuToHop());
 
     CreateStudentRequest req2 = result.getStudents().get(1).getRequest();
     assertEquals("Trần Thị Bình", req2.getHoTen());
@@ -97,7 +101,8 @@ class StudentExcelImporterTest {
     assertEquals("Đà Nẵng", req2.getDiaChi());
     assertEquals("0987654321", req2.getSdt());
     assertEquals("001208005678", req2.getCmnd());
-    assertEquals(new BigDecimal("9.25"), req2.getDiemDauVao());
+    assertEquals(new BigDecimal("9.25"), result.getStudents().get(1).getTongDiemDauVao());
+    assertEquals(2, result.getStudents().get(1).getThuTuToHop());
   }
 
   @Test

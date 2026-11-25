@@ -83,11 +83,11 @@ class AuthIntegrationTest {
                             .description("Quản trị viên")
                             .build()));
     roleDao
-        .findByName(RoleType.TEACHER.name())
+        .findByName(RoleType.GIAO_VIEN.name())
         .orElseGet(
             () ->
                 roleDao.save(
-                    Role.builder().name(RoleType.TEACHER.name()).description("Giáo viên").build()));
+                    Role.builder().name(RoleType.GIAO_VIEN.name()).description("Giáo viên").build()));
     roleDao
         .findByName(RoleType.STUDENT.name())
         .orElseGet(

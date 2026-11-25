@@ -2,7 +2,7 @@ import { request } from "./records-api.js";
 
 // Ghép dữ liệu từ các API hiện có; giới hạn số yêu cầu lịch sử chạy đồng thời.
 export function studentHistory(id) {
-  return request(`/student/${id}/enrollments`);
+  return request(`/api/v1/students/${id}/enrollments`);
 }
 
 export async function enrollmentStudents() {

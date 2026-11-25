@@ -43,7 +43,6 @@ CREATE TABLE `hoc_sinh` (
   NgayTiepNhan DATETIME NOT NULL,
   CMMD VARCHAR(100) NOT NULL,
   NgayCapNhat DATETIME NOT NULL,
-  DiemDauVao DECIMAL(4,2) NOT NULL,
   PRIMARY KEY (`MaHS`),
   UNIQUE KEY `uk_hs_maso` (`MaSoHS`),
   KEY `ix_HOC_SINH_HoTen` (`HoTen`),
@@ -86,9 +85,11 @@ CREATE TABLE `nam_hoc` (
 CREATE TABLE `nguoi_giam_ho` (
   `MaNGH` bigint unsigned NOT NULL AUTO_INCREMENT,
   `HoTen` varchar(150) NOT NULL,
+  `CMND` varchar(20) DEFAULT NULL,
   `SoDienThoai` varchar(20) DEFAULT NULL,
   `DiaChi` varchar(500) DEFAULT NULL,
   PRIMARY KEY (`MaNGH`),
+  UNIQUE KEY `uk_NGUOI_GIAM_HO_CMND` (`CMND`),
   KEY `ix_NGUOI_GIAM_HO_SoDienThoai` (`SoDienThoai`),
   CONSTRAINT `ck_ngh_hoten` CHECK ((char_length(trim(`HoTen`)) > 0))
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;

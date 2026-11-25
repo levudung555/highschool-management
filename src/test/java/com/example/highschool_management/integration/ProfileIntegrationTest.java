@@ -90,7 +90,7 @@ class ProfileIntegrationTest {
   private String student(String name) {
     return "{\"hoTen\":\""
         + name
-        + "\",\"ngaySinh\":\"2010-02-03\",\"gioiTinh\":\"NU\",\"sdt\":\"0901234567\",\"cmnd\":\"000000000010\",\"diemDauVao\":24.5}";
+        + "\",\"ngaySinh\":\"2010-02-03\",\"gioiTinh\":\"NU\",\"sdt\":\"0901234567\",\"cmnd\":\"000000000010\"}";
   }
 
   @Test

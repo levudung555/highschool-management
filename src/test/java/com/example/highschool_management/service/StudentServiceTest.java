@@ -5,6 +5,8 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
 import com.example.highschool_management.dao.StudentDao;
+import com.example.highschool_management.dao.AdmissionRecordDao;
+import com.example.highschool_management.dao.AdmissionRecordDao.ToHopOption;
 import com.example.highschool_management.dto.request.CreateStudentRequest;
 import com.example.highschool_management.dto.response.StudentResponse;
 import com.example.highschool_management.enums.SexEnum;
@@ -17,6 +19,7 @@ import com.example.highschool_management.importer.StudentExcelImporter;
 import com.example.highschool_management.dto.response.ImportStudentResponse;
 import jakarta.validation.Validator;
 import java.io.IOException;
+import java.math.BigDecimal;
 import java.sql.Date;
 import java.time.LocalDate;
 import java.util.Collections;
@@ -30,12 +33,17 @@ import org.mockito.Mock;
 import org.mockito.Spy;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.mock.web.MockMultipartFile;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.TransactionDefinition;
+import org.springframework.transaction.support.SimpleTransactionStatus;
 
 @ExtendWith(MockitoExtension.class)
 class StudentServiceTest {
 
   @Mock private NguoiDungHienTai nguoiDung;
   @Mock private StudentDao studentDao;
+  @Mock private AdmissionRecordDao admissionRecordDao;
+  @Mock private PlatformTransactionManager transactionManager;
   @Mock private StudentExcelImporter studentExcelImporter;
   @Mock private Validator validator;
   @Spy private StudentMapper studentMapper = new StudentMapper();
@@ -103,14 +111,27 @@ class StudentServiceTest {
     MockMultipartFile file = new MockMultipartFile("file", "test.xlsx", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", new byte[]{1, 2, 3});
     StudentExcelImporter.ImportResult importResult = new StudentExcelImporter.ImportResult();
     importResult.setTotalRows(1);
-    importResult.getStudents().add(new StudentExcelImporter.StudentRow(2, request));
+    importResult
+        .getStudents()
+        .add(new StudentExcelImporter.StudentRow(2, request, new BigDecimal("24.5"), 2));
 
     when(studentExcelImporter.importStudents(file)).thenReturn(importResult);
+    when(admissionRecordDao.danhSachToHopTheoNamHoc(1L))
+        .thenReturn(List.of(new ToHopOption(10L, "A00"), new ToHopOption(11L, "A01")));
     when(validator.validate(request)).thenReturn(Collections.emptySet());
     when(studentDao.existsSoDienThoai("0912345678")).thenReturn(false);
     when(studentDao.getLastMaSoHS()).thenReturn("HS0010");
+    when(transactionManager.getTransaction(any(TransactionDefinition.class)))
+        .thenReturn(new SimpleTransactionStatus());
+    when(studentDao.insertStudent(any(Student.class)))
+        .thenAnswer(
+            invocation -> {
+              Student student = invocation.getArgument(0);
+              student.setMaHS(11L);
+              return student;
+            });
 
-    ImportStudentResponse response = studentService.importStudents(file);
+    ImportStudentResponse response = studentService.importStudents(file, 1L);
 
     assertNotNull(response);
     assertEquals(1, response.getTotalRows());
@@ -120,5 +141,6 @@ class StudentServiceTest {
 
     verify(nguoiDung).yeuCauVaiTro("ADMIN", "BGH", "GIAO_VU");
     verify(studentDao).insertStudent(any(Student.class));
+    verify(admissionRecordDao).taoHoSo(11L, 1L, 11L, new BigDecimal("24.5"));
   }
 }

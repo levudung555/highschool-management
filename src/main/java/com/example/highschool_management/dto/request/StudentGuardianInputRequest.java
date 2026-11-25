@@ -21,6 +21,9 @@ public class StudentGuardianInputRequest {
     @Size(max = 150, message = "Họ tên người giám hộ tối đa 150 ký tự")
     private String hoTen;
 
+    @Size(max = 20, message = "CMND/CCCD người giám hộ tối đa 20 ký tự")
+    private String cmnd;
+
     @Size(max = 20, message = "Số điện thoại tối đa 20 ký tự")
     private String sdt;
 

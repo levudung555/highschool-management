@@ -81,9 +81,16 @@ function field([name, label, type, required, extra]) {
 export function profileFields(type, creating) {
   const fields = [...profiles[type].fields];
   if (type === "students" && creating) {
-    fields.push(["cmnd", "CCCD", "text", true, 100], ["diemDauVao", "Điểm đầu vào", "number", true]);
+    fields.push(["cmnd", "CCCD", "text", true, 100]);
   }
-  return fields.map(field).join("");
+  const studentGuardianFields = type === "students" && creating
+    ? `<div class="col-12"><hr class="my-1"><h3 class="h6 mb-0">Thông tin phụ huynh (không bắt buộc)</h3><p class="small text-secondary mb-0">Nếu nhập, phụ huynh sẽ được lưu và liên kết tự động với học sinh.</p></div>
+      <div class="col-md-6"><label class="form-label" for="profile-tenPhuHuynh">Họ tên phụ huynh</label><input class="form-control" id="profile-tenPhuHuynh" name="tenPhuHuynh" maxlength="150"></div>
+      <div class="col-md-6"><label class="form-label" for="profile-cmndPhuHuynh">CMND/CCCD phụ huynh</label><input class="form-control" id="profile-cmndPhuHuynh" name="cmndPhuHuynh" maxlength="20"></div>
+      <div class="col-md-6"><label class="form-label" for="profile-sdtPhuHuynh">Số điện thoại phụ huynh</label><input class="form-control" id="profile-sdtPhuHuynh" name="sdtPhuHuynh" type="tel" maxlength="20" pattern="[+0-9 ().-]{8,20}" title="Nhập số điện thoại từ 8 đến 20 ký tự"></div>
+      <div class="col-md-6"><label class="form-label" for="profile-moiQuanHePhuHuynh">Quan hệ</label><select class="form-select" id="profile-moiQuanHePhuHuynh" name="moiQuanHePhuHuynh"><option value="PHU_HUYNH">Phụ huynh</option><option value="CHA">Cha</option><option value="ME">Mẹ</option><option value="NGUOI_GIAM_HO">Người giám hộ</option></select></div>`
+    : "";
+  return fields.map(field).join("") + studentGuardianFields;
 }
 
 export function profilePage(type) {
@@ -92,7 +99,10 @@ export function profilePage(type) {
     <section id="view-${type}" class="view-panel" hidden>
       <div class="page-heading">
         <div><div class="eyebrow">${config.code} · QUẢN LÝ HỒ SƠ</div><h1>${config.title}</h1><p>${config.description}</p></div>
-        <button class="btn btn-primary" data-profile-add="${type}">＋ Thêm ${config.singular}</button>
+        <div class="d-flex flex-wrap gap-2">
+          ${type === "students" ? '<button type="button" class="btn btn-outline-primary" data-student-import>⇧ Import Excel</button>' : type === "teachers" ? '<button type="button" class="btn btn-outline-primary" data-teacher-import>⇧ Import Excel</button>' : ""}
+          <button class="btn btn-primary" data-profile-add="${type}">＋ Thêm ${config.singular}</button>
+        </div>
       </div>
       <div class="section-card">
         <form class="profile-filters filter-bar" id="${type}-filters" data-profile-filters="${type}">
@@ -137,6 +147,34 @@ export const homePage = `
       <article class="section-card home-guide"><span class="eyebrow">QUY TRÌNH HỌC VỤ</span><h2>Từ hồ sơ đến lớp học</h2><ol><li><strong>Tiếp nhận hồ sơ</strong><p>Nhập thông tin học sinh và kết nối người giám hộ.</p></li><li><strong>Gửi yêu cầu xếp lớp</strong><p>Chọn lớp, năm học và ngày bắt đầu phù hợp.</p></li><li><strong>Phê duyệt & theo dõi</strong><p>BGH/Admin duyệt; danh sách lớp cập nhật theo ngày hiệu lực.</p></li></ol><a class="btn btn-outline-primary" href="#requests">Mở yêu cầu & phê duyệt →</a></article>
     </div>
   </section>`;
+
+export const studentImportModal = `
+  <div class="modal fade" id="studentImportModal" tabindex="-1" aria-labelledby="student-import-title" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered"><form class="modal-content" id="student-import-form">
+      <div class="modal-header"><h2 class="modal-title fs-5" id="student-import-title">Import học sinh và hồ sơ nhập học</h2><button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Đóng"></button></div>
+      <div class="modal-body">
+        <div class="alert alert-danger d-none" id="student-import-error" role="alert"></div>
+          <p class="small text-secondary">File danh sách dùng cột ToHopLuaChon với mã như A00, A01; cột MaToHop là mã số tra cứu. Hệ thống cũng lấy tên, CCCD và số điện thoại phụ huynh để tạo liên kết với học sinh.</p>
+        <div class="mb-3"><label class="form-label" for="students-import-year">Năm học</label><select class="form-select" id="students-import-year" required></select></div>
+        <div class="alert alert-info small" id="students-import-combination-map" role="status"></div>
+        <div><label class="form-label" for="students-import-file">File Excel</label><input class="form-control" id="students-import-file" type="file" accept=".xlsx,.xls,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel" required></div>
+      </div>
+      <div class="modal-footer"><button type="button" class="btn btn-light" data-bs-dismiss="modal">Hủy</button><button type="submit" class="btn btn-primary" id="student-import-submit">Import</button></div>
+    </form></div>
+  </div>`;
+
+export const teacherImportModal = `
+  <div class="modal fade" id="teacherImportModal" tabindex="-1" aria-labelledby="teacher-import-title" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered"><form class="modal-content" id="teacher-import-form">
+      <div class="modal-header"><h2 class="modal-title fs-5" id="teacher-import-title">Import giáo viên</h2><button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Đóng"></button></div>
+      <div class="modal-body">
+        <div class="alert alert-danger d-none" id="teacher-import-error" role="alert"></div>
+        <p class="small text-secondary">Cột bắt buộc: HoTen. Các cột tùy chọn: NgaySinh, SoDienThoai, Email, ChuyenMon, TrangThai. Mã giáo viên được hệ thống tự cấp; trạng thái mặc định là đang công tác.</p>
+        <div><label class="form-label" for="teachers-import-file">File Excel</label><input class="form-control" id="teachers-import-file" type="file" accept=".xlsx,.xls,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel" required></div>
+      </div>
+      <div class="modal-footer"><button type="button" class="btn btn-light" data-bs-dismiss="modal">Hủy</button><button type="submit" class="btn btn-primary" id="teacher-import-submit">Import</button></div>
+    </form></div>
+  </div>`;
 
 export const profileModals = `
   <!-- Thêm / sửa hồ sơ: nội dung trường được khai báo trong profiles. -->

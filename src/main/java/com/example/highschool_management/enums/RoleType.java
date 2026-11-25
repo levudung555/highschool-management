@@ -5,6 +5,5 @@ public enum RoleType {
     BGH,
     GIAO_VU,
     GIAO_VIEN,
-    TEACHER,
     STUDENT
 }

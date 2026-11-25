@@ -62,7 +62,7 @@ export async function currentUser() {
     return null;
   }
 
-  // Lấy vai trò từ claim scope (vd: "ROLE_ADMIN ROLE_TEACHER" hoặc "ADMIN")
+  // Lấy vai trò từ claim scope (vd: "ROLE_ADMIN ROLE_GIAO_VIEN" hoặc "ADMIN")
   const scopes = (payload.scope || "")
     .split(" ")
     .filter(Boolean)
@@ -71,7 +71,7 @@ export async function currentUser() {
   return {
     sub: payload.sub,
     hoTen: payload.sub || "Người dùng",
-    vaiTro: scopes.length ? scopes : ["ADMIN"],
+    vaiTro: scopes,
   };
 }
 export async function login(username, password) {

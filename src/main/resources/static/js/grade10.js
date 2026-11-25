@@ -9,10 +9,18 @@ const batchApi = "/api/v1/enrollments/batches";
 let catalog;
 let proposals = [];
 let preparedClasses = [];
+let existingClasses = [];
 let existingNames = new Set();
 let preview;
 let adjustments = new Map();
 const undoHistory = [];
+let canFinalize = false;
+
+export function configureGrade10(user) {
+  canFinalize = (user?.vaiTro || []).some((role) => ["ADMIN", "BGH"].includes(role));
+  field("openClasses").hidden = !canFinalize;
+  field("confirmForm").hidden = !canFinalize;
+}
 
 // Disable the whole panel while a request runs to prevent double submission.
 async function run(action) {
@@ -69,17 +77,17 @@ async function loadYears() {
 }
 
 async function loadClassNames(maNamHoc) {
-  const names = new Set();
+  const classes = [];
   let page = 0;
   let totalPages;
   do {
     const query = new URLSearchParams({ maNamHoc, trang: page, kichThuoc: 100 });
     const result = await request(classApi + "?" + query);
-    for (const item of result.danhSach) names.add(item.tenLop.toUpperCase());
+    classes.push(...result.danhSach);
     totalPages = result.tongSoTrang;
     page++;
   } while (page < totalPages);
-  return names;
+  return classes;
 }
 
 function showConfirmed(ngayVaoLop, soHocSinh) {
@@ -118,10 +126,11 @@ async function loadProposals() {
     throw new Error("Sĩ số mặc định phải là số nguyên từ 1 đến 65535.");
   }
   query.set("chiTieuLopMoi", capacity);
-  [proposals, existingNames] = await Promise.all([
+  [proposals, existingClasses] = await Promise.all([
     request(classApi + "/grade-10/opening-proposal?" + query),
     loadClassNames(year.maNamHoc),
   ]);
+  existingNames = new Set(existingClasses.map((lop) => lop.tenLop.toUpperCase()));
   preparedClasses = status.lopDaChuanBi;
   if (!proposals.some((proposal) => proposal.tongNguyenVong > 0)) {
     showMessage("Năm học này chưa có hồ sơ nhập học.");
@@ -164,8 +173,8 @@ function addDraft(section, update = true) {
   }
   let index = 1;
   while (names.has("10A" + index)) index++;
-  const orders = preparedClasses
-    .filter((lop) => lop.maToHop === Number(section.dataset.toHop))
+  const orders = existingClasses
+    .filter((lop) => lop.soKhoi === 10 && lop.maToHop === Number(section.dataset.toHop))
     .map((lop) => lop.thuTuXep);
   for (const input of section.querySelectorAll("[data-class-order]")) orders.push(Number(input.value));
   const order = Math.max(0, ...orders) + 1;
@@ -216,7 +225,11 @@ async function openClasses() {
   const names = new Set(existingNames);
   for (const section of field("proposals").querySelectorAll("[data-to-hop]")) {
     const maToHop = Number(section.dataset.toHop);
-    const orders = new Set(preparedClasses.filter((lop) => lop.maToHop === maToHop).map((lop) => lop.thuTuXep));
+    const orders = new Set(
+      existingClasses
+        .filter((lop) => lop.soKhoi === 10 && lop.maToHop === maToHop)
+        .map((lop) => lop.thuTuXep),
+    );
     for (const row of section.querySelectorAll(".draft")) {
       const nameInput = row.querySelector("[data-class-name]");
       const capacityInput = row.querySelector("[data-class-capacity]");
@@ -334,7 +347,7 @@ async function showPreview() {
   date.min = year.batDau > catalog.homNay ? year.batDau : catalog.homNay;
   date.max = year.ketThuc;
   date.value = date.min;
-  field("confirmForm").hidden = false;
+  field("confirmForm").hidden = !canFinalize;
   field("review").hidden = false;
 }
 

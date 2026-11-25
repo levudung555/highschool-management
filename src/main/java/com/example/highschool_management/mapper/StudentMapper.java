@@ -16,7 +16,6 @@ public class StudentMapper {
     student.setDiaChi(request.getDiaChi());
     student.setSdt(request.getSdt());
     student.setCmnd(request.getCmnd());
-    student.setDiemDauVao(request.getDiemDauVao());
     return student;
   }
 

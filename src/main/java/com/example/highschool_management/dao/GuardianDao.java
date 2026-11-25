@@ -9,6 +9,7 @@ public interface GuardianDao {
     Guardian insertGuardian(Guardian guardian);
     boolean updateGuardian(Guardian guardian);
     boolean existsSoDienThoai(String soDienThoai);
+    Optional<Guardian> findByCMND(String cmnd);
     Optional<Guardian> findByMaNGH(Long maNGH);
     boolean deleteGuardians(List<Long> maNGH);
     List<Long> findExistingIds(List<Long> maNGH);

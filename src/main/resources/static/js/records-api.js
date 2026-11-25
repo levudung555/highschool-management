@@ -2,10 +2,14 @@ import { authorizedFetch } from "./auth.js";
 
 // Các API hồ sơ do nhánh student cung cấp, dùng cùng Bearer Token với UC08/UC09.
 export async function request(path, options = {}) {
+  const isFormData =
+    typeof FormData !== "undefined" && options.body instanceof FormData;
   const response = await authorizedFetch(path, {
     ...options,
     headers: {
-      ...(options.body ? { "Content-Type": "application/json" } : {}),
+      ...(options.body && !isFormData
+        ? { "Content-Type": "application/json" }
+        : {}),
       ...options.headers,
     },
   });
@@ -41,5 +45,14 @@ export function formatDate(value) {
     ? new Intl.DateTimeFormat("vi-VN").format(
         new Date(value.slice(0, 10) + "T12:00:00"),
       )
+    : "—";
+}
+
+export function formatDateTime(value) {
+  return value
+    ? new Intl.DateTimeFormat("vi-VN", {
+        dateStyle: "short",
+        timeStyle: "short",
+      }).format(new Date(value))
     : "—";
 }

@@ -44,7 +44,10 @@ public class SchoolClassServiceImpl implements SchoolClassService {
   public ClassCatalogResponse danhMuc() {
     nguoiDung.yeuCauVaiTro("ADMIN", "BGH", "GIAO_VU", "GIAO_VIEN");
     return new ClassCatalogResponse(
-        schoolClassDao.danhSachNamHoc(), schoolClassDao.danhSachKhoi(), LocalDate.now(clock));
+        schoolClassDao.danhSachNamHoc(),
+        schoolClassDao.danhSachKhoi(),
+        schoolClassDao.danhSachToHop(),
+        LocalDate.now(clock));
   }
 
   @Override
@@ -196,7 +199,7 @@ public class SchoolClassServiceImpl implements SchoolClassService {
   @Override
   @Transactional(isolation = Isolation.READ_COMMITTED)
   public List<Long> xacNhanMoLop10(ConfirmGrade10ClassesRequest request) {
-    nguoiDung.yeuCauVaiTro("ADMIN", "BGH", "GIAO_VU");
+    nguoiDung.yeuCauVaiTro("ADMIN", "BGH");
     Long maNamHoc = request.maNamHoc();
 
     LocalDate ngayKetThuc = schoolClassDao.khoaNamHocDeMoLop(maNamHoc)
@@ -260,6 +263,16 @@ public class SchoolClassServiceImpl implements SchoolClassService {
       return lop.getMaLop();
     }
 
+    if (schoolClassDao.tonTaiThuTuXep(
+        maNamHoc, maKhoi10, item.maToHop(), item.thuTuXep())) {
+      throw new BusinessException(
+          "Thứ tự xếp "
+              + item.thuTuXep()
+              + " của tổ hợp "
+              + item.maToHop()
+              + " đã được sử dụng trong năm học này");
+    }
+
     SchoolClass lop = new SchoolClass();
     lop.setMaNamHoc(maNamHoc);
     lop.setMaKhoi(maKhoi10);
@@ -273,8 +286,9 @@ public class SchoolClassServiceImpl implements SchoolClassService {
       return schoolClassDao.themLop(lop);
     } catch (DuplicateKeyException e) {
       throw new BusinessException(
-              "Lớp " + tenLop
-                      + "vì tên lớp hoặc thứ tự xếp đã được sử dụng");
+              "Không thể tạo lớp "
+                      + tenLop
+                      + " vì tên lớp hoặc thứ tự xếp vừa bị một yêu cầu khác sử dụng");
     }
   }
 

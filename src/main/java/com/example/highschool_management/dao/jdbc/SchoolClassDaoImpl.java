@@ -66,6 +66,24 @@ public class SchoolClassDaoImpl implements SchoolClassDao {
   }
 
   @Override
+  public boolean tonTaiThuTuXep(Long maNamHoc, Long maKhoi, Long maToHop, Integer thuTuXep) {
+    Boolean exists =
+        jdbcTemplate.queryForObject(
+            """
+            SELECT EXISTS(
+              SELECT 1 FROM lop_hoc
+              WHERE MaNH = ? AND MaKhoi = ? AND MaToHop = ? AND ThuTuXep = ?
+            )
+            """,
+            Boolean.class,
+            maNamHoc,
+            maKhoi,
+            maToHop,
+            thuTuXep);
+    return Boolean.TRUE.equals(exists);
+  }
+
+  @Override
   public Long themLop(SchoolClass schoolClass) {
     String sql = "Insert into lop_hoc (MaNH, MaKhoi, TenLop, TrangThai, MaToHop, SiSoToiDa, ThuTuXep) values (?, ?, ?, ?, ?, ?, ?)";
     var keyHolder = new GeneratedKeyHolder();
@@ -193,6 +211,18 @@ public class SchoolClassDaoImpl implements SchoolClassDao {
   }
 
   @Override
+  public List<ToHop> danhSachToHop() {
+    return jdbcTemplate.query(
+        "SELECT MaToHop, MaNH, KyHieu, TenToHop FROM to_hop_mon ORDER BY MaNH, KyHieu",
+        (rs, rowNum) ->
+            new ToHop(
+                rs.getLong("MaToHop"),
+                rs.getLong("MaNH"),
+                rs.getString("KyHieu"),
+                rs.getString("TenToHop")));
+  }
+
+  @Override
   public long demDanhSach(String k, Long y, Long g, String s) {
     return Objects.requireNonNull(
         jdbcTemplate.queryForObject(
@@ -218,6 +248,9 @@ public class SchoolClassDaoImpl implements SchoolClassDao {
                 namHoc.MaSoNH AS NamHoc,
                 khoi.SoKhoi,
                 lop.TrangThai,
+                lop.MaToHop,
+                lop.SiSoToiDa,
+                lop.ThuTuXep,
 
                 -- Đếm học sinh còn thuộc lớp tại ngày được chọn
                 (
@@ -254,6 +287,9 @@ public class SchoolClassDaoImpl implements SchoolClassDao {
                     resultSet.getString("NamHoc"),
                     resultSet.getInt("SoKhoi"),
                     resultSet.getString("TrangThai"),
+                    resultSet.getObject("MaToHop", Long.class),
+                    resultSet.getObject("SiSoToiDa", Integer.class),
+                    resultSet.getObject("ThuTuXep", Integer.class),
                     resultSet.getLong("SiSo")
             ),
             ngayTinhSiSo,

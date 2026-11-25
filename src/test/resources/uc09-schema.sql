@@ -25,7 +25,6 @@ CREATE TABLE IF NOT EXISTS hoc_sinh (
   NgayTiepNhan DATETIME NOT NULL,
   CMMD VARCHAR(100) NOT NULL,
   NgayCapNhat DATETIME NOT NULL,
-  DiemDauVao DECIMAL(4,2) NOT NULL,
   PRIMARY KEY (MaHS),
   UNIQUE KEY uk_hs_maso (MaSoHS),
   CONSTRAINT ck_hs_gioitinh CHECK ((GioiTinh in ('NAM','NU','KHAC'))),
@@ -160,7 +159,7 @@ INSERT INTO khoi_lop (MaKhoi, SoKhoi) VALUES
 INSERT INTO lop_hoc (MaLop, MaNH, MaKhoi, TenLop, TrangThai) VALUES
 (1, 1, 1, '10A1', 'HOAT_DONG');
 
-INSERT INTO hoc_sinh (MaHS, MaSoHS, HoTen, NgaySinh, GioiTinh, NgayTiepNhan, CMMD, NgayCapNhat, DiemDauVao) VALUES
+INSERT INTO hoc_sinh (MaHS, MaSoHS, HoTen, NgaySinh, GioiTinh, NgayTiepNhan, CMMD, NgayCapNhat) VALUES
 (1, 'HS0001', 'Nguyen Van A', '2008-01-01', 'NAM', '2023-09-05', '000000000001', CURRENT_TIMESTAMP, 8.50);
 
 INSERT INTO xep_lop (MaXL, MaHS, MaLop, TuNgay, DenNgay, LyDoKetThuc, MaTKNguoiThucHien, ThoiDiemThucHien) VALUES

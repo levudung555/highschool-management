@@ -221,7 +221,7 @@ public class EnrollmentServiceImpl implements EnrollmentService {
     @Override
     @Transactional(isolation = Isolation.SERIALIZABLE)
     public int chotXepLop10(ConfirmGrade10PlacementRequest yeuCau) {
-        long maTaiKhoan = nguoiDung.yeuCauVaiTro("ADMIN", "BGH", "GIAO_VU");
+        long maTaiKhoan = nguoiDung.yeuCauVaiTro("ADMIN", "BGH");
         Long maNamHoc = yeuCau.maNamHoc();
 
         schoolClassDao.khoaNamHocDeMoLop(maNamHoc).orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy năm học có mã: " + maNamHoc));

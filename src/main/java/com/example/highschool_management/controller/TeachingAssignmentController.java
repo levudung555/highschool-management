@@ -6,6 +6,7 @@ import com.example.highschool_management.dto.request.CreateTeachingAssignmentReq
 import com.example.highschool_management.dto.response.TeachingAssignmentResponse;
 import com.example.highschool_management.service.TeachingAssignmentService;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import jakarta.validation.Valid;
 import org.springframework.web.bind.annotation.*;
 
@@ -13,6 +14,7 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/api/v1/teaching-assignments")
+@PreAuthorize("hasAnyRole('ADMIN', 'BGH', 'GIAO_VU')")
 public class TeachingAssignmentController {
     private final TeachingAssignmentService service;
 

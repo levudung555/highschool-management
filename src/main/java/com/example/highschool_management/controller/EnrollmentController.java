@@ -28,17 +28,20 @@ public class EnrollmentController {
   }
 
   @GetMapping("/enrollments/batches/status")
+  @PreAuthorize("hasAnyRole('ADMIN', 'BGH', 'GIAO_VU')")
   public Grade10PlacementStatusResponse trangThaiXepLop10(
           @RequestParam("maNamHoc") Long maNamHoc) {
     return service.trangThaiXepLop10(maNamHoc);
   }
   @GetMapping("/enrollments/batches/preview")
+  @PreAuthorize("hasAnyRole('ADMIN', 'BGH', 'GIAO_VU')")
   public Grade10PlacementPreviewResponse xemTruocXepLop10(
           @RequestParam("maNamHoc") Long maNamHoc) {
 
     return service.xemTruocXepLop10(maNamHoc);
   }
   @PostMapping("/enrollments/batches/confirm")
+  @PreAuthorize("hasAnyRole('ADMIN', 'BGH')")
   public Map<String, Object> chotXepLop10(
           @Valid @RequestBody ConfirmGrade10PlacementRequest yeuCau) {
 
@@ -65,19 +68,19 @@ public class EnrollmentController {
   }
 
   @GetMapping("/enrollments/{id}")
-  @PreAuthorize("hasAnyRole('ADMIN', 'BGH', 'GIAO_VU', 'GIAO_VIEN', 'TEACHER')")
+  @PreAuthorize("hasAnyRole('ADMIN', 'BGH', 'GIAO_VU')")
   public EnrollmentResponse chiTiet(@PathVariable("id") Long id) {
     return service.chiTiet(id);
   }
 
   @GetMapping("/students/{id}/enrollments")
-  @PreAuthorize("hasAnyRole('ADMIN', 'BGH', 'GIAO_VU', 'GIAO_VIEN', 'TEACHER')")
+  @PreAuthorize("hasAnyRole('ADMIN', 'BGH', 'GIAO_VU')")
   public List<EnrollmentResponse> lichSu(@PathVariable("id") Long id) {
     return service.lichSu(id);
   }
 
   @GetMapping("/classes/{id}/students")
-  @PreAuthorize("hasAnyRole('ADMIN', 'BGH', 'GIAO_VU', 'GIAO_VIEN', 'TEACHER')")
+  @PreAuthorize("hasAnyRole('ADMIN', 'BGH', 'GIAO_VU')")
   public PageResponse<ClassStudentResponse> danhSach(
       @PathVariable("id") Long id,
       @RequestParam(name = "ngay", required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE)
@@ -88,7 +91,7 @@ public class EnrollmentController {
   }
 
   @GetMapping("/enrollments")
-  @PreAuthorize("hasAnyRole('ADMIN', 'BGH', 'GIAO_VU', 'GIAO_VIEN', 'TEACHER')")
+  @PreAuthorize("hasAnyRole('ADMIN', 'BGH', 'GIAO_VU')")
   public PageResponse<EnrollmentRequestResponse> timYeuCau(
       @RequestParam(name = "tuKhoa", defaultValue = "") String tuKhoa,
       @RequestParam(name = "maNamHoc", required = false) Long year,
@@ -98,7 +101,7 @@ public class EnrollmentController {
   }
 
   @GetMapping("/enrollments/students")
-  @PreAuthorize("hasAnyRole('ADMIN', 'BGH', 'GIAO_VU', 'GIAO_VIEN', 'TEACHER')")
+  @PreAuthorize("hasAnyRole('ADMIN', 'BGH', 'GIAO_VU')")
   public PageResponse<EnrollmentStudentResponse> timHocSinh(
       @RequestParam(name = "maNamHocChuaXep", required = false) Long year,
       @RequestParam(name = "tuKhoa", defaultValue = "") String tuKhoa,

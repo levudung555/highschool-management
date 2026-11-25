@@ -2,8 +2,10 @@
 package com.example.highschool_management.importer;
 
 import com.example.highschool_management.dto.request.CreateStudentRequest;
+import com.example.highschool_management.dto.request.StudentGuardianInputRequest;
 import com.example.highschool_management.dto.response.ImportErrorResponse;
 import com.example.highschool_management.enums.SexEnum;
+import com.example.highschool_management.exception.InvalidRequestException;
 import com.example.highschool_management.utils.ExcelHelper;
 import org.apache.poi.ss.usermodel.*;
 import org.springframework.stereotype.Component;
@@ -16,8 +18,10 @@ import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.text.Normalizer;
 
 @Component
@@ -54,10 +58,29 @@ public class StudentExcelImporter {
     public static class StudentRow {
         private final int rowNumber;
         private final CreateStudentRequest request;
+        private final BigDecimal tongDiemDauVao;
+        private final Integer thuTuToHop;
+        private final String kyHieuToHop;
 
-        public StudentRow(int rowNumber, CreateStudentRequest request) {
+        public StudentRow(
+                int rowNumber,
+                CreateStudentRequest request,
+                BigDecimal tongDiemDauVao,
+                Integer thuTuToHop) {
+            this(rowNumber, request, tongDiemDauVao, thuTuToHop, null);
+        }
+
+        public StudentRow(
+                int rowNumber,
+                CreateStudentRequest request,
+                BigDecimal tongDiemDauVao,
+                Integer thuTuToHop,
+                String kyHieuToHop) {
             this.rowNumber = rowNumber;
             this.request = request;
+            this.tongDiemDauVao = tongDiemDauVao;
+            this.thuTuToHop = thuTuToHop;
+            this.kyHieuToHop = kyHieuToHop;
         }
 
         public int getRowNumber() {
@@ -66,6 +89,18 @@ public class StudentExcelImporter {
 
         public CreateStudentRequest getRequest() {
             return request;
+        }
+
+        public BigDecimal getTongDiemDauVao() {
+            return tongDiemDauVao;
+        }
+
+        public Integer getThuTuToHop() {
+            return thuTuToHop;
+        }
+
+        public String getKyHieuToHop() {
+            return kyHieuToHop;
         }
     }
 
@@ -98,6 +133,12 @@ public class StudentExcelImporter {
                 );
             }
 
+            Columns columns = findColumns(sheet.getRow(0));
+            if (columns.kyHieuToHop() < 0 && columns.thuTuToHop() < 0) {
+                throw new InvalidRequestException(
+                        "File Excel phải có cột ToHopLuaChon hoặc cột mã/thứ tự tổ hợp");
+            }
+
             // Bỏ qua dòng tiêu đề, bắt đầu từ dòng số 2 trong Excel.
             for (int i = 1; i <= sheet.getLastRowNum(); i++) {
 
@@ -111,11 +152,9 @@ public class StudentExcelImporter {
                 result.setTotalRows(result.getTotalRows() + 1);
 
                 try {
-                    CreateStudentRequest request = parseStudent(row);
+                    StudentRow student = parseStudent(row, columns, i + 1);
 
-                    result.getStudents().add(
-                            new StudentRow(i + 1, request)
-                    );
+                    result.getStudents().add(student);
 
                 } catch (Exception e) {
                     addError(
@@ -134,12 +173,12 @@ public class StudentExcelImporter {
     /*
      * Đọc dữ liệu của một dòng Excel.
      */
-    private CreateStudentRequest parseStudent(Row row) {
+    private StudentRow parseStudent(Row row, Columns columns, int rowNumber) {
 
         CreateStudentRequest request = new CreateStudentRequest();
 
         // A - Họ tên
-        String hoTen = ExcelHelper.getCellValue(row, 0);
+        String hoTen = value(row, columns.hoTen());
 
         if (hoTen == null) {
             throw new IllegalArgumentException("Họ tên không được để trống");
@@ -148,7 +187,7 @@ public class StudentExcelImporter {
         request.setHoTen(hoTen);
 
         // B - Ngày sinh
-        LocalDate ngaySinh = getLocalDate(row.getCell(1));
+        LocalDate ngaySinh = getLocalDate(cell(row, columns.ngaySinh()));
 
         if (ngaySinh == null) {
             throw new IllegalArgumentException("Ngày sinh không được để trống");
@@ -157,7 +196,7 @@ public class StudentExcelImporter {
         request.setNgaySinh(Date.valueOf(ngaySinh));
 
         // C - Giới tính
-        String gioiTinh = ExcelHelper.getCellValue(row, 2);
+        String gioiTinh = value(row, columns.gioiTinh());
 
         if (gioiTinh == null) {
             throw new IllegalArgumentException("Giới tính không được để trống");
@@ -166,18 +205,126 @@ public class StudentExcelImporter {
         request.setGioiTinh(parseGender(gioiTinh));
 
         // D - Địa chỉ
-        request.setDiaChi(ExcelHelper.getCellValue(row, 3));
+        request.setDiaChi(value(row, columns.diaChi()));
 
         // E - Số điện thoại
-        request.setSdt(ExcelHelper.getCellValue(row, 4));
+        request.setSdt(value(row, columns.sdt()));
 
         // F - CCCD
-        request.setCmnd(ExcelHelper.getCellValue(row, 5));
+        request.setCmnd(value(row, columns.cmnd()));
 
         // G - Điểm đầu vào
-        request.setDiemDauVao(getBigDecimal(row.getCell(6)));
+        BigDecimal tongDiemDauVao = getBigDecimal(cell(row, columns.diemDauVao()));
+        String giaTriToHop = value(row, columns.kyHieuToHop());
+        Integer thuTuToHop = null;
+        String kyHieuToHop = null;
+        if (isNumeric(giaTriToHop)) {
+            thuTuToHop = getPositiveInteger(cell(row, columns.kyHieuToHop()));
+        } else {
+            kyHieuToHop = normalizeCombinationCode(giaTriToHop);
+        }
 
-        return request;
+        // Các file cũ có thể chỉ có cột tổ hợp dạng thứ tự hoặc mã tổ hợp.
+        if (thuTuToHop == null && kyHieuToHop == null) {
+            String giaTriMaToHop = value(row, columns.thuTuToHop());
+            if (isNumeric(giaTriMaToHop)) {
+                thuTuToHop = getPositiveInteger(cell(row, columns.thuTuToHop()));
+            } else if (giaTriMaToHop != null && !giaTriMaToHop.startsWith("=")) {
+                kyHieuToHop = normalizeCombinationCode(giaTriMaToHop);
+            }
+        }
+        if (thuTuToHop == null && kyHieuToHop == null) {
+            throw new IllegalArgumentException(
+                    "Mã tổ hợp không được để trống; nhập mã như A00 ở cột ToHopLuaChon "
+                            + "hoặc mã số ở cột MaToHop");
+        }
+
+        String tenPhuHuynh = value(row, columns.tenPhuHuynh());
+        String cmndPhuHuynh = value(row, columns.cmndPhuHuynh());
+        String sdtPhuHuynh = value(row, columns.sdtPhuHuynh());
+        if (tenPhuHuynh != null || cmndPhuHuynh != null || sdtPhuHuynh != null) {
+            if (tenPhuHuynh == null) {
+                throw new IllegalArgumentException(
+                        "Họ tên phụ huynh không được để trống khi có thông tin phụ huynh");
+            }
+            StudentGuardianInputRequest guardian = new StudentGuardianInputRequest();
+            guardian.setHoTen(tenPhuHuynh);
+            guardian.setCmnd(cmndPhuHuynh);
+            guardian.setSdt(sdtPhuHuynh);
+            guardian.setMoiQuanHe("PHU_HUYNH");
+            guardian.setLienHeChinh(true);
+            request.setNguoiGiamHo(guardian);
+        }
+
+        return new StudentRow(rowNumber, request, tongDiemDauVao, thuTuToHop, kyHieuToHop);
+    }
+
+    private Columns findColumns(Row header) {
+        Map<String, Integer> headers = new HashMap<>();
+        if (header != null) {
+            for (Cell cell : header) {
+                String label = new DataFormatter().formatCellValue(cell).trim();
+                if (!label.isEmpty()) {
+                    headers.put(normalizeHeader(label), cell.getColumnIndex());
+                }
+            }
+        }
+
+        return new Columns(
+                column(headers, 0, "HOTEN", "HOTENHOCSINH", "TENHOCSINH", "HOVATEN"),
+                column(headers, 1, "NGAYSINH"),
+                column(headers, 2, "GIOITINH", "PHAI"),
+                column(headers, 3, "DIACHI"),
+                column(headers, 4, "SODIENTHOAI", "SDT", "DIENTHOAI"),
+                column(headers, 5, "CCCD", "CMND", "CMMD", "SOCCCD"),
+                column(headers, 6, "DIEMDAUVAO", "DIEMTHI"),
+                column(headers, -1, "TOHOPLUACHON", "KYHIEUTOHOP", "MATOHOPKYHIEU", "TOHOPCODE"),
+                column(headers, -1, "TOHOP", "TOHOPMON", "TOHOPTHI", "MATOHOP", "MASO", "NHOMTOHOP", "TOHOPTUYENSINH"),
+                column(headers, -1, "TENPHUHUYNH", "HOTENPHUHUYNH", "TENNGUOIGIAMHO"),
+                column(headers, -1, "CMNDPHUHUYNH", "CCCDPHUHUYNH", "CMNDNGUOIGIAMHO", "CCCDNGUOIGIAMHO"),
+                column(headers, -1, "SDTPHUHUYNH", "SODIENTHOAIPHUHUYNH", "DIENTHOAIPHUHUYNH", "SDTNGUOIGIAMHO", "SODIENTHOAINGUOIGIAMHO")
+        );
+    }
+
+    private int column(Map<String, Integer> headers, int fallback, String... aliases) {
+        for (String alias : aliases) {
+            Integer index = headers.get(alias);
+            if (index != null) {
+                return index;
+            }
+        }
+        return fallback;
+    }
+
+    private String normalizeHeader(String value) {
+        return removeAccent(value).replaceAll("[^A-Za-z0-9]", "").toUpperCase(Locale.ROOT);
+    }
+
+    private String normalizeCombinationCode(String value) {
+        if (value == null || value.isBlank()) {
+            return null;
+        }
+        return value.trim().toUpperCase(Locale.ROOT);
+    }
+
+    private boolean isNumeric(String value) {
+        if (value == null || value.isBlank()) {
+            return false;
+        }
+        try {
+            new BigDecimal(value.trim().replace(",", "."));
+            return true;
+        } catch (NumberFormatException ignored) {
+            return false;
+        }
+    }
+
+    private String value(Row row, int index) {
+        return index < 0 ? null : ExcelHelper.getCellValue(row, index);
+    }
+
+    private Cell cell(Row row, int index) {
+        return index < 0 || row == null ? null : row.getCell(index);
     }
 
     /*
@@ -274,6 +421,28 @@ public class StudentExcelImporter {
         }
     }
 
+    private Integer getPositiveInteger(Cell cell) {
+        if (cell == null || cell.getCellType() == CellType.BLANK) {
+            return null;
+        }
+
+        String value = new DataFormatter().formatCellValue(cell).trim().replace(",", ".");
+        if (value.isEmpty()) {
+            return null;
+        }
+
+        try {
+            int code = new BigDecimal(value).intValueExact();
+            if (code <= 0) {
+                throw new IllegalArgumentException("Mã tổ hợp phải là số nguyên dương");
+            }
+            return code;
+        } catch (NumberFormatException | ArithmeticException e) {
+            throw new IllegalArgumentException(
+                    "Mã tổ hợp phải là số nguyên dương (1, 2, 3...): " + value);
+        }
+    }
+
     /*
      * Kiểm tra một dòng có hoàn toàn trống hay không.
      */
@@ -283,7 +452,7 @@ public class StudentExcelImporter {
             return true;
         }
 
-        for (int i = 0; i < 8; i++) {
+        for (int i = 0; i < row.getLastCellNum(); i++) {
             if (ExcelHelper.getCellValue(row, i) != null) {
                 return false;
             }
@@ -291,6 +460,21 @@ public class StudentExcelImporter {
 
         return true;
     }
+
+    private record Columns(
+            int hoTen,
+            int ngaySinh,
+            int gioiTinh,
+            int diaChi,
+            int sdt,
+            int cmnd,
+            int diemDauVao,
+            int kyHieuToHop,
+            int thuTuToHop,
+            int tenPhuHuynh,
+            int cmndPhuHuynh,
+            int sdtPhuHuynh
+    ) {}
 
     /*
      * Loại bỏ dấu tiếng Việt để so sánh giới tính.

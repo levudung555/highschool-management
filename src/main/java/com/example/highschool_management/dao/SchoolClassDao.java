@@ -20,6 +20,8 @@ public interface SchoolClassDao {
 
   boolean tonTaiLop(String tenLop, Long maNamHoc);
 
+  boolean tonTaiThuTuXep(Long maNamHoc, Long maKhoi, Long maToHop, Integer thuTuXep);
+
   Long themLop(SchoolClass schoolClass);
 
   boolean tonTaiLopKhac(Long maLop, String tenLop, Long maNamHoc);
@@ -33,6 +35,8 @@ public interface SchoolClassDao {
   List<NamHoc> danhSachNamHoc();
 
   List<Khoi> danhSachKhoi();
+
+  List<ToHop> danhSachToHop();
 
   long demDanhSach(String tuKhoa, Long maNamHoc, Long maKhoi, String trangThai);
 

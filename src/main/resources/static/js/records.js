@@ -1,10 +1,12 @@
-import { request, escapeHtml, query, formatDate } from "./records-api.js";
+import { request, escapeHtml, query, formatDate, formatDateTime } from "./records-api.js";
 import {
   profiles,
   profileFields,
   profilePage,
   homePage,
   profileModals,
+  studentImportModal,
+  teacherImportModal,
 } from "./records-templates.js";
 
 // 1. Trạng thái riêng của UC05–UC07 và trang chủ.
@@ -57,7 +59,10 @@ export function mountRecords() {
       "beforebegin",
       homePage + Object.keys(profiles).map(profilePage).join(""),
     );
-  document.body.insertAdjacentHTML("beforeend", profileModals);
+  document.body.insertAdjacentHTML(
+    "beforeend",
+    profileModals + studentImportModal + teacherImportModal,
+  );
   const navigation = document.querySelector(".side-nav");
   navigation.insertAdjacentHTML(
     "afterbegin",
@@ -96,12 +101,42 @@ export function configureRecords(user, catalog, classes) {
     "Tất cả khối",
   );
   updateClassFilter();
+  $("students-import-year").innerHTML = options(
+    catalog.namHoc,
+    "maNamHoc",
+    (row) => row.ten,
+    "Chọn năm học",
+  );
+  const namHocHienTai = catalog.namHoc.find(
+    (year) => year.batDau <= catalog.homNay && year.ketThuc >= catalog.homNay,
+  );
+  if (namHocHienTai) $("students-import-year").value = namHocHienTai.maNamHoc;
+  updateImportCombinationMap();
   const allowed = user.vaiTro.some((role) =>
     ["ADMIN", "BGH", "GIAO_VU"].includes(role),
   );
   document
     .querySelectorAll("[data-profile-add]")
     .forEach((button) => (button.disabled = !allowed));
+  document
+    .querySelectorAll("[data-student-import]")
+    .forEach((button) => (button.disabled = !allowed));
+  document
+    .querySelectorAll("[data-teacher-import]")
+    .forEach((button) => (button.disabled = !allowed));
+}
+
+function updateImportCombinationMap() {
+  const maNamHoc = Number($("students-import-year").value);
+  const combos = (state.catalog?.toHop || []).filter(
+    (combo) => combo.maNamHoc === maNamHoc,
+  );
+  $("students-import-combination-map").textContent = combos.length
+    ? "Thứ tự mã tổ hợp (nếu dùng cột số): " +
+      combos
+        .map((combo, index) => (index + 1) + " = " + combo.kyHieu)
+        .join(" · ")
+    : "Năm học này chưa có tổ hợp môn.";
 }
 
 function updateClassFilter() {
@@ -255,6 +290,21 @@ async function saveProfile(event) {
         body[key] = body[key].trim();
         if (!body[key]) body[key] = null;
       });
+      if (type === "students" && !row) {
+        const guardian = {
+          hoTen: body.tenPhuHuynh,
+          cmnd: body.cmndPhuHuynh,
+          sdt: body.sdtPhuHuynh,
+          moiQuanHe: body.moiQuanHePhuHuynh,
+          lienHeChinh: true,
+        };
+        ["tenPhuHuynh", "cmndPhuHuynh", "sdtPhuHuynh", "moiQuanHePhuHuynh"].forEach(
+          (key) => delete body[key],
+        );
+        if (guardian.hoTen || guardian.cmnd || guardian.sdt) {
+          body.nguoiGiamHo = guardian;
+        }
+      }
       await request(config.endpoint + (row ? `/${row[config.id]}` : ""), {
         method: row ? "PUT" : "POST",
         body: JSON.stringify(body),
@@ -290,17 +340,153 @@ async function detail(type, row, reopen = true) {
     `${profiles[type].title} · ${row.hoTen}`;
   $("profile-detail-body").innerHTML = "<p>Đang tải hồ sơ…</p>";
   if (reopen) showModal("profileDetailModal");
+  let detailData = row;
+  if (type === "students") {
+    try {
+      detailData = await request(`/student/${row.maHS}`);
+    } catch (error) {
+      $("profile-detail-body").innerHTML =
+        `<p class="text-danger">${escapeHtml(error.message)}</p>`;
+      return;
+    }
+  }
   const details = profiles[type].fields
     .map(([name, label, fieldType, , options]) => {
-      let value = row[name];
+      let value = detailData[name];
       if (fieldType === "select")
         value = options.find(([key]) => key === value)?.[1] || value;
       if (fieldType === "date") value = formatDate(value);
       return `<div><dt>${label}</dt><dd>${escapeHtml(value || "—")}</dd></div>`;
     })
     .join("");
+  const studentDetails =
+    type === "students"
+      ? [
+          ["Mã hồ sơ học sinh", detailData.maSoHS],
+          ["Mã hệ thống", detailData.maHS],
+          ["CCCD", detailData.cmnd],
+          ["Ngày tiếp nhận", formatDate(detailData.ngayTiepNhan)],
+          ["Ngày giờ thêm/cập nhật gần nhất", formatDateTime(detailData.ngayCapNhat)],
+        ]
+          .map(
+            ([label, value]) =>
+              `<div><dt>${label}</dt><dd>${escapeHtml(value ?? "—")}</dd></div>`,
+          )
+          .join("")
+      : "";
+  const admissionRecords = detailData.hoSoNhapHoc || [];
+  const admissionDetails =
+    type === "students"
+      ? `<section class="mt-4">
+          <div class="guardian-heading"><h3>Hồ sơ nhập học</h3></div>
+          ${admissionRecords.length
+            ? `<div class="table-responsive"><table class="table table-sm app-table">
+                <thead><tr><th>Mã hồ sơ</th><th>Mã học sinh</th><th>Năm học</th><th>Tổ hợp</th><th>Tổng điểm đầu vào</th></tr></thead>
+                <tbody>${admissionRecords.map((record) => `<tr>
+                  <td>${escapeHtml(record.maHoSoNhapHoc)}</td>
+                  <td>${escapeHtml(record.maHS ?? detailData.maHS)}</td>
+                  <td>${escapeHtml(record.namHoc)} · #${escapeHtml(record.maNamHoc)}</td>
+                  <td>${escapeHtml(record.kyHieuToHop)} · ${escapeHtml(record.tenToHop)} · #${escapeHtml(record.maToHop)}</td>
+                  <td>${escapeHtml(record.tongDiemDauVao)}</td>
+                </tr>`).join("")}</tbody>
+              </table></div>`
+            : '<p class="text-secondary">Chưa có hồ sơ nhập học.</p>'}
+        </section>`
+      : "";
   $("profile-detail-body").innerHTML =
-    `<dl class="detail-grid">${details}</dl>`;
+    `<dl class="detail-grid">${details}${studentDetails}</dl>${admissionDetails}`;
+
+  // Nếu là xem chi tiết NGƯỜI GIÁM HỘ (guardians)
+  if (type === "guardians") {
+    state.detailGuardian = row;
+    try {
+      const [wardStudents, allStudents] = await Promise.all([
+        request(`/guardian/${row.maNGH}/students`),
+        request("/student")
+      ]);
+      $("profile-detail-body").insertAdjacentHTML(
+        "beforeend",
+        `
+        <div class="guardian-heading mt-4"><h3>Danh sách học sinh được giám hộ</h3></div>
+        <div id="guardian-ward-error" class="alert alert-danger d-none" role="alert"></div>
+        <div class="guardian-list">
+          ${wardStudents.length ? wardStudents.map(st => `
+            <article>
+              <div>
+                <strong>${escapeHtml(st.hoTen)}</strong> <span class="badge bg-secondary ms-1">${escapeHtml(st.maSoHS || '')}</span>
+                <p>Quan hệ: <strong>${escapeHtml(st.moiQuanHe || 'Người thân')}</strong> ${st.lienHeChinh ? '· <span class="text-success font-weight-bold">Liên hệ chính</span>' : ''} · Ngày sinh: ${formatDate(st.ngaySinh)}</p>
+              </div>
+              <button class="btn btn-light text-danger btn-sm" data-ward-unlink="${st.maHS}" data-guardian-id="${row.maNGH}">Gỡ liên kết</button>
+            </article>
+          `).join("") : '<p class="text-secondary">Chưa có học sinh nào liên kết với người giám hộ này.</p>'}
+        </div>
+        <form id="ward-link-form" class="guardian-link-form mt-3 pt-3 border-top">
+          <h4>Thêm / cập nhật học sinh được giám hộ</h4>
+          <div class="row g-3">
+            <div class="col-md-6">
+              <label for="ward-student-select" class="form-label">Chọn học sinh *</label>
+              <select class="form-select" id="ward-student-select" name="maHS" required>
+                <option value="">-- Chọn học sinh --</option>
+                ${allStudents.map(s => `<option value="${s.maHS}">${escapeHtml(s.hoTen)} · ${escapeHtml(s.maSoHS || '')}</option>`).join("")}
+              </select>
+            </div>
+            <div class="col-md-3">
+              <label for="ward-relationship" class="form-label">Mối quan hệ *</label>
+              <select class="form-select" id="ward-relationship" name="moiQuanHe" required>
+                <option value="Bố">Bố</option>
+                <option value="Mẹ">Mẹ</option>
+                <option value="Ông">Ông</option>
+                <option value="Bà">Bà</option>
+                <option value="Người thân khác">Người thân khác</option>
+              </select>
+            </div>
+            <div class="col-md-3 d-flex align-items-end pb-2">
+              <div class="form-check">
+                <input type="checkbox" name="lienHeChinh" id="ward-primary" class="form-check-input">
+                <label class="form-check-label" for="ward-primary">Liên hệ chính</label>
+              </div>
+            </div>
+          </div>
+          <button class="btn btn-primary mt-3" type="submit">Lưu liên kết</button>
+        </form>
+        `
+      );
+
+      $("ward-student-select").onchange = (event) => {
+        const found = wardStudents.find(w => w.maHS == event.target.value);
+        if (found) {
+          $("ward-relationship").value = found.moiQuanHe || "Bố";
+          $("ward-primary").checked = Boolean(found.lienHeChinh);
+        }
+      };
+
+      $("ward-link-form").onsubmit = async (event) => {
+        event.preventDefault();
+        await withButton(event.submitter, async () => {
+          try {
+            const form = event.target;
+            await request("/guardian/link", {
+              method: "POST",
+              body: JSON.stringify({
+                maHS: Number(form.elements.maHS.value),
+                maNGH: row.maNGH,
+                moiQuanHe: form.elements.moiQuanHe.value.trim(),
+                lienHeChinh: form.elements.lienHeChinh.checked
+              })
+            });
+            await detail("guardians", row, false);
+            notify("Đã liên kết học sinh thành công.");
+          } catch (err) {
+            showError("guardian-ward-error", err);
+          }
+        });
+      };
+    } catch (err) {
+      $("profile-detail-body").insertAdjacentHTML("beforeend", `<p class="text-danger">${escapeHtml(err.message)}</p>`);
+    }
+    return;
+  }
+
   if (type !== "students") return;
   state.detailStudent = row;
   try {
@@ -313,7 +499,7 @@ async function detail(type, row, reopen = true) {
       `
       <div class="guardian-heading"><h3>Người giám hộ</h3><a href="#history" id="profile-history-link" class="btn btn-outline-primary">Xem lịch sử xếp lớp</a></div>
       <div id="guardian-link-error" class="alert alert-danger d-none" role="alert"></div>
-      <div class="guardian-list">${linked.length ? linked.map((guardian) => `<article><div><strong>${escapeHtml(guardian.hoTen)}</strong><p>${escapeHtml(guardian.moiQuanHe)} · ${escapeHtml(guardian.sdt)} ${guardian.lienHeChinh ? "· Liên hệ chính" : ""}</p></div><button class="btn btn-light text-danger" data-guardian-unlink="${guardian.maNGH}">Gỡ liên kết</button></article>`).join("") : '<p class="text-secondary">Chưa có người giám hộ được liên kết.</p>'}</div>
+      <div class="guardian-list">${linked.length ? linked.map((guardian) => `<article><div><strong>${escapeHtml(guardian.hoTen)}</strong><p>Mã: ${escapeHtml(guardian.maNGH)} · CCCD: ${escapeHtml(guardian.cmnd || "—")} · SĐT: ${escapeHtml(guardian.sdt || "—")}</p><p>Địa chỉ: ${escapeHtml(guardian.diaChi || "—")} · Quan hệ: ${escapeHtml(guardian.moiQuanHe || "—")} ${guardian.lienHeChinh ? "· Liên hệ chính" : ""}</p></div><button class="btn btn-light text-danger" data-guardian-unlink="${guardian.maNGH}">Gỡ liên kết</button></article>`).join("") : '<p class="text-secondary">Chưa có người giám hộ được liên kết.</p>'}</div>
       <form id="guardian-link-form" class="guardian-link-form"><h4>Thêm / cập nhật liên kết</h4><p class="small text-secondary">Chọn người đã có để cập nhật quan hệ. Tạo hồ sơ mới tại menu Người giám hộ.</p><div class="row g-3">
         <div class="col-md-6"><label for="guardian-link-select" class="form-label">Người giám hộ *</label><select class="form-select" id="guardian-link-select" name="maNGH" required><option value="">Chọn người giám hộ</option>${guardians.map((guardian) => `<option value="${guardian.maNGH}">${escapeHtml(guardian.hoTen)} · ${escapeHtml(guardian.sdt)}</option>`).join("")}</select></div>
         <div class="col-md-6"><label for="guardian-relationship" class="form-label">Quan hệ với học sinh *</label><input class="form-control" id="guardian-relationship" name="moiQuanHe" placeholder="Cha, mẹ, ông, bà…" maxlength="50" required></div>
@@ -369,6 +555,73 @@ async function detail(type, row, reopen = true) {
 // 6. Sự kiện: dùng delegation cho các dòng bảng được render lại.
 function bindEvents() {
   $("profile-form").addEventListener("submit", saveProfile);
+  $("student-import-form").addEventListener("submit", async (event) => {
+    event.preventDefault();
+    const input = $("students-import-file");
+    const file = input.files?.[0];
+    if (!file) return;
+    const button = $("student-import-submit");
+    try {
+      $("student-import-error").classList.add("d-none");
+      await withButton(button, async () => {
+        const form = new FormData();
+        form.append("file", file);
+        form.append("maNamHoc", $("students-import-year").value);
+        const response = await request("/student/import", {
+          method: "POST",
+          body: form,
+        });
+        const result = response?.result ?? response;
+        await loadProfiles("students");
+        const errors = Array.isArray(result.errors) ? result.errors : [];
+        const summary = `Đã nhập ${result.successCount ?? 0}/${result.totalRows ?? 0} học sinh; ${result.failureCount ?? errors.length} dòng lỗi.`;
+        const errorList = errors.slice(0, 10).map((item) =>
+          `<li>Dòng ${escapeHtml(item.row)} · ${escapeHtml(item.field || "GENERAL")}: ${escapeHtml(item.message || "Dữ liệu không hợp lệ")}</li>`,
+        ).join("");
+        $("students-feedback").innerHTML = `<strong>${escapeHtml(summary)}</strong>${errorList ? `<ul class="mb-0 mt-2">${errorList}</ul>${errors.length > 10 ? `<small>Còn ${errors.length - 10} lỗi khác.</small>` : ""}` : ""}`;
+        notify(summary);
+        hideModal("studentImportModal");
+        input.value = "";
+      });
+    } catch (error) {
+      showError("student-import-error", error);
+      $("students-feedback").textContent = error.message;
+      $("students-feedback").classList.add("text-danger");
+    }
+  });
+  $("teacher-import-form").addEventListener("submit", async (event) => {
+    event.preventDefault();
+    const input = $("teachers-import-file");
+    const file = input.files?.[0];
+    if (!file) return;
+    const button = $("teacher-import-submit");
+    try {
+      $("teacher-import-error").classList.add("d-none");
+      await withButton(button, async () => {
+        const form = new FormData();
+        form.append("file", file);
+        const response = await request("/teacher/import", {
+          method: "POST",
+          body: form,
+        });
+        const result = response?.result ?? response;
+        await loadProfiles("teachers");
+        const errors = Array.isArray(result.errors) ? result.errors : [];
+        const summary = `Đã nhập ${result.successCount ?? 0}/${result.totalRows ?? 0} giáo viên; ${result.failureCount ?? errors.length} dòng lỗi.`;
+        const errorList = errors.slice(0, 10).map((item) =>
+          `<li>Dòng ${escapeHtml(item.row)} · ${escapeHtml(item.field || "GENERAL")}: ${escapeHtml(item.message || "Dữ liệu không hợp lệ")}</li>`,
+        ).join("");
+        $("teachers-feedback").innerHTML = `<strong>${escapeHtml(summary)}</strong>${errorList ? `<ul class="mb-0 mt-2">${errorList}</ul>${errors.length > 10 ? `<small>Còn ${errors.length - 10} lỗi khác.</small>` : ""}` : ""}`;
+        notify(summary);
+        hideModal("teacherImportModal");
+        input.value = "";
+      });
+    } catch (error) {
+      showError("teacher-import-error", error);
+      $("teachers-feedback").textContent = error.message;
+      $("teachers-feedback").classList.add("text-danger");
+    }
+  });
   $("profileModal").addEventListener("shown.bs.modal", () =>
     $("profile-hoTen").focus(),
   );
@@ -387,7 +640,20 @@ function bindEvents() {
   ["student-year", "student-grade"].forEach((id) =>
     $(id).addEventListener("change", updateClassFilter),
   );
+  $("students-import-year").addEventListener("change", updateImportCombinationMap);
   document.addEventListener("click", async (event) => {
+    const importButton = event.target.closest("[data-student-import]");
+    if (importButton) {
+      $("student-import-error").classList.add("d-none");
+      showModal("studentImportModal");
+      return;
+    }
+    const teacherImportButton = event.target.closest("[data-teacher-import]");
+    if (teacherImportButton) {
+      $("teacher-import-error").classList.add("d-none");
+      showModal("teacherImportModal");
+      return;
+    }
     const add = event.target.closest("[data-profile-add]");
     if (add) return editProfile(add.dataset.profileAdd);
     const page = event.target.closest("[data-profile-page]");
@@ -412,6 +678,26 @@ function bindEvents() {
       } catch (error) {
         unlink.disabled = false;
         showError("guardian-link-error", error);
+      }
+      return;
+    }
+    const wardUnlink = event.target.closest("[data-ward-unlink]");
+    if (wardUnlink) {
+      wardUnlink.disabled = true;
+      try {
+        await request(
+          "/guardian/unlink?" +
+            query({
+              maHS: wardUnlink.dataset.wardUnlink,
+              maNGH: wardUnlink.dataset.guardianId,
+            }),
+          { method: "DELETE" },
+        );
+        await detail("guardians", state.detailGuardian, false);
+        notify("Đã gỡ liên kết học sinh.");
+      } catch (error) {
+        wardUnlink.disabled = false;
+        showError("guardian-ward-error", error);
       }
       return;
     }

@@ -4,10 +4,10 @@ import com.example.highschool_management.enums.SexEnum;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
+import jakarta.validation.Valid;
 import lombok.Getter;
 import lombok.Setter;
 
-import java.math.BigDecimal;
 import java.sql.Date;
 
 @Getter
@@ -28,7 +28,6 @@ public class CreateStudentRequest {
     @Size(max = 100)
     String cmnd;
 
-    @NotNull(message = "Điểm đầu vào không được để trống")
-    @jakarta.validation.constraints.Digits(integer = 2, fraction = 2)
-    BigDecimal diemDauVao;
+    @Valid
+    StudentGuardianInputRequest nguoiGiamHo;
 }

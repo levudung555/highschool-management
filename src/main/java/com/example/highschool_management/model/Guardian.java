@@ -10,6 +10,7 @@ import lombok.experimental.FieldDefaults;
 public class Guardian {
     Long maNGH;
     String hoTen;
+    String cmnd;
     String sdt;
     String diaChi;
 }

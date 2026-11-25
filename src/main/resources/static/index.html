@@ -34,8 +34,8 @@
           ><small>Quản lý lớp & học sinh</small>
         </div>
       </div>
-      <div class="nav-label">QUẢN LÝ HỌC VỤ</div>
-      <nav class="side-nav">
+      <div class="nav-label" hidden>QUẢN LÝ HỌC VỤ</div>
+      <nav class="side-nav" hidden>
         <a href="#classes" data-view="classes"
           ><span data-icon="grid"></span>Lớp học<span class="nav-arrow"
             >›</span
@@ -43,9 +43,11 @@
         ><a href="#roster" data-view="roster"
           ><span data-icon="users"></span>Danh sách lớp</a
         ><a href="#requests" data-view="requests"
-          ><span data-icon="inbox"></span>Yêu cầu & phê duyệt</a
+          ><span data-icon="inbox"></span>Xếp lớp & chuyển lớp</a
         ><a href="#history" data-view="history"
           ><span data-icon="history"></span>Lịch sử học sinh</a
+        ><a href="#attendance" data-view="attendance"
+          ><span data-icon="check-circle"></span>Điểm danh học sinh</a
         >
       </nav>
       <div class="sidebar-bottom">
@@ -109,7 +111,7 @@
           class="alert alert-danger d-none"
           role="alert"
         ></div>
-        <section id="view-classes" class="view-panel">
+        <section id="view-classes" class="view-panel" hidden>
           <div class="page-heading">
             <div>
               <div class="eyebrow">TỔ CHỨC LỚP HỌC</div>
@@ -178,7 +180,7 @@
                     <th>Khối</th>
                     <th>Năm học</th>
                     <th>Sĩ số hiện tại</th>
-                    <th>Trạng thái</th>
+                    <th>Đến ngày</th>
                     <th class="text-end">Thao tác</th>
                   </tr>
                 </thead>
@@ -190,7 +192,7 @@
           <div class="info-strip">
             <span data-icon="info"></span>
             <p>
-              Sĩ số được tính từ học sinh đã duyệt và còn thuộc lớp hôm nay. Chỉ
+              Sĩ số được tính từ học sinh còn thuộc lớp hôm nay. Chỉ
               có thể xóa lớp chưa phát sinh dữ liệu liên quan.
             </p>
           </div>
@@ -255,10 +257,11 @@
           <div class="page-heading">
             <div>
               <div class="eyebrow">XẾP LỚP & ĐIỀU CHUYỂN</div>
-              <h1>Danh sách xếp lớp & điều chuyển</h1>
-              <p>Quản lý phân lớp và điều chuyển học sinh.</p>
+              <h1>Xếp lớp & chuyển lớp</h1>
+              <p>Thực hiện trực tiếp và giữ đầy đủ lịch sử lớp học.</p>
             </div>
             <div class="d-flex gap-2 flex-wrap">
+              <button type="button" class="btn btn-outline-primary" id="toggleGrade10" aria-expanded="false" aria-controls="grade10Panel" disabled>Xếp lớp 10 đầu năm</button>
               <button class="btn btn-outline-primary" id="newTransferBtn">
                 <span data-icon="transfer"></span>Chuyển lớp</button
               ><button class="btn btn-primary" id="newEnrollBtn">
@@ -266,8 +269,51 @@
               </button>
             </div>
           </div>
+          <section id="grade10Panel" class="section-card p-3 p-md-4 mb-3" hidden>
+            <h2 class="grade10-title"><span data-icon="users" aria-hidden="true"></span>Xếp lớp 10 đầu năm</h2>
+            <fieldset id="grade10-workspace" class="border-0 p-0">
+              <div class="grade10-filters">
+                <div>
+                  <label for="grade10-year" class="form-label">Năm học</label>
+                  <select class="form-select" id="grade10-year"></select>
+                </div>
+                <div>
+                  <label for="grade10-capacity" class="form-label">Sĩ số mặc định của lớp mới</label>
+                  <input class="form-control" id="grade10-capacity" type="number" min="1" max="65535" value="40" required>
+                </div>
+                <div>
+                  <button type="button" class="btn btn-primary" id="grade10-load">Xem đề xuất</button>
+                </div>
+              </div>
+              <div id="grade10-message" role="status" aria-live="polite"></div>
+              <section id="grade10-planning" class="border-top pt-3" hidden>
+                <h3>Phương án mở lớp</h3>
+                <div id="grade10-proposals"></div>
+                <div class="grade10-actions">
+                  <p id="grade10-next" class="mb-0" aria-live="polite"></p>
+                  <button type="button" class="btn btn-outline-primary" id="grade10-openClasses">Xác nhận tạo lớp</button>
+                  <button type="button" class="btn btn-primary" id="grade10-preview">Xem trước danh sách</button>
+                </div>
+              </section>
+              <section id="grade10-review" class="border-top mt-4 pt-3" hidden>
+                <h3 id="grade10-reviewTitle">Danh sách xếp thử</h3>
+                <p id="grade10-reviewInfo"></p>
+                <div id="grade10-rosters"></div>
+                <form id="grade10-confirmForm" class="row g-3 align-items-end mt-2">
+                  <div class="col-sm-auto">
+                    <label for="grade10-date" class="form-label">Ngày vào lớp của cả đợt</label>
+                    <input id="grade10-date" class="form-control" type="date" required>
+                  </div>
+                  <div class="col-sm-auto">
+                    <button type="submit" class="btn btn-success">Chốt xếp lớp toàn khối</button>
+                  </div>
+                </form>
+              </section>
+            </fieldset>
+          </section>
           <div class="section-card">
-            <form class="filter-bar" id="requestFilters">
+
+            <form class="filter-bar" id="requestFilters"><select id="enrollmentListYear" class="form-select" aria-label="Năm học"></select>
               <label class="search-control wide-search"
                 ><span data-icon="search"></span
                 ><input
@@ -275,7 +321,9 @@
                   class="form-control"
                   placeholder="Tìm học sinh, mã học sinh hoặc lớp…"
                   maxlength="100"
-                  aria-label="Tìm yêu cầu" /></label
+                  aria-label="Tìm phân lớp" /></label
+              ><span class="subtle-label ms-auto"
+                >Lớp được xác định theo ngày có hiệu lực</span
               >
             </form>
             <div class="table-responsive">
@@ -283,9 +331,10 @@
                 <thead>
                   <tr>
                     <th>Học sinh</th>
-                    <th>Hình thức</th>
+                    <th>Mã phân lớp</th>
                     <th>Lớp đích</th>
                     <th>Ngày hiệu lực</th>
+                    <th>Đến ngày</th>
                     <th class="text-end">Thao tác</th>
                   </tr>
                 </thead>
@@ -326,7 +375,7 @@
                 Xem lịch sử
               </button>
               <p class="small text-secondary mt-3 mb-0">
-                Bao gồm các yêu cầu chờ duyệt, đã duyệt và đã từ chối.
+                Bao gồm lớp đã kết thúc, đang học và lịch xếp lớp tương lai.
               </p>
             </div>
             <div class="section-card history-main">
@@ -335,6 +384,101 @@
                 <span class="count-pill" id="historyCount">0 bản ghi</span>
               </div>
               <div id="historyTimeline"></div>
+            </div>
+          </div>
+        </section>
+        <section id="view-attendance" class="view-panel" hidden>
+          <div class="page-heading">
+            <div>
+              <div class="eyebrow">CHUYÊN CẦN & KỶ LUẬT</div>
+              <h1>Điểm danh học sinh</h1>
+              <p>Ghi nhận và cập nhật trạng thái chuyên cần theo lớp, ngày và buổi học.</p>
+            </div>
+            <div class="d-flex gap-2">
+              <button class="btn btn-outline-secondary" id="attendanceLookupBtn">
+                <span data-icon="search"></span>Tra cứu chuyên cần (UC12)
+              </button>
+            </div>
+          </div>
+          <div class="section-card">
+            <div class="card-heading">
+              <div>
+                <h2>Bộ lọc điểm danh</h2>
+                <p>Chọn lớp học, ngày và buổi/tiết để mở danh sách học sinh.</p>
+              </div>
+            </div>
+            <form class="filter-bar" id="attendanceFilters">
+              <select id="attYear" class="form-select" aria-label="Năm học">
+                <option value="">Tất cả năm học</option>
+              </select>
+              <select id="attClass" class="form-select" aria-label="Lớp học">
+                <option value="">-- Chọn lớp học --</option>
+              </select>
+              <input type="date" id="attDate" class="form-control" aria-label="Ngày điểm danh" />
+              <select id="attSession" class="form-select" aria-label="Buổi học">
+                <option value="SANG">Buổi Sáng</option>
+                <option value="CHIEU">Buổi Chiều</option>
+                <option value="TOI">Buổi Tối</option>
+              </select>
+              <button type="button" class="btn btn-primary" id="openAttendanceBtn">
+                <span data-icon="refresh"></span>Mở danh sách
+              </button>
+            </form>
+          </div>
+
+          <div class="section-card mt-3" id="attendanceListCard" style="display: none;">
+            <div class="card-heading d-flex flex-wrap justify-content-between align-items-center gap-2">
+              <div>
+                <h2>
+                  Danh sách học sinh
+                  <span class="count-pill" id="attStudentCount">0</span>
+                </h2>
+                <div class="d-flex align-items-center gap-2 mt-1">
+                  <span class="badge bg-secondary" id="attSessionStatusBadge">Chưa tạo phiên</span>
+                  <span class="text-secondary small" id="attSessionInfo"></span>
+                </div>
+              </div>
+              <div class="d-flex flex-wrap gap-2" id="attBatchActions">
+                <button type="button" class="btn btn-sm btn-outline-success" id="btnBatchCoMat">
+                  <span data-icon="check"></span>Tất cả có mặt
+                </button>
+                <button type="button" class="btn btn-sm btn-outline-warning" id="btnBatchCoPhep">
+                  Vắng có phép
+                </button>
+                <button type="button" class="btn btn-sm btn-outline-danger" id="btnBatchKhongPhep">
+                  Vắng không phép
+                </button>
+                <button type="button" class="btn btn-sm btn-outline-secondary" id="btnBatchReset">
+                  Đặt lại
+                </button>
+              </div>
+            </div>
+
+            <div class="table-responsive mt-3">
+              <table class="table app-table align-middle">
+                <thead>
+                  <tr>
+                    <th style="width: 50px;">STT</th>
+                    <th style="width: 110px;">Mã HS</th>
+                    <th>Họ và tên</th>
+                    <th style="width: 110px;">Ngày sinh</th>
+                    <th style="width: 220px;">Trạng thái</th>
+                    <th>Ghi chú</th>
+                  </tr>
+                </thead>
+                <tbody id="attendanceTableRows"></tbody>
+              </table>
+            </div>
+
+            <div class="d-flex justify-content-between align-items-center pt-3 border-top mt-2">
+              <div class="text-secondary small">
+                Kiểm tra kỹ thông tin trước khi nhấn lưu.
+              </div>
+              <div>
+                <button type="button" class="btn btn-primary px-4" id="btnSaveAttendance">
+                  <span data-icon="check-circle"></span><span id="btnSaveAttendanceText">Lưu điểm danh</span>
+                </button>
+              </div>
             </div>
           </div>
         </section>
@@ -405,6 +549,10 @@
                 </div>
               </div>
               <div id="editStatusField" class="mt-3" hidden>
+                <label for="classCapacityInput" class="form-label">Sĩ số tối đa</label>
+                <input id="classCapacityInput" type="number" min="1" max="65535" class="form-control mb-2">
+                <label for="classCapacityReason" class="form-label">Lý do khi tăng chỉ tiêu</label>
+                <input id="classCapacityReason" maxlength="255" class="form-control mb-2">
                 <label for="classStatusInput" class="form-label"
                   >Trạng thái</label
                 ><select id="classStatusInput" class="form-select">
@@ -443,7 +591,7 @@
           <form id="enrollmentForm">
             <div class="modal-header">
               <div>
-                <span class="eyebrow">YÊU CẦU HỌC VỤ</span>
+                <span class="eyebrow">PHÂN LỚP HỌC SINH</span>
                 <h2 class="modal-title" id="enrollmentModalTitle">
                   Xếp học sinh vào lớp
                 </h2>
@@ -460,6 +608,11 @@
                 class="alert alert-danger d-none form-error"
                 role="alert"
               ></div>
+              <label for="enrollmentYear" class="form-label">Năm học</label>
+              <select id="enrollmentYear" class="form-select mb-3" required></select>
+              <label for="enrollmentGrade" class="form-label">Khối đích</label>
+              <select id="enrollmentGrade" class="form-select mb-3" required></select>
+              <p id="currentClassLabel" class="alert alert-info" hidden></p>
               <input id="enrollmentKind" type="hidden" value="enroll" /><label
                 for="studentSearchInput"
                 class="form-label"
@@ -484,7 +637,7 @@
                 required
               ></select
               ><label for="enrollmentDateInput" class="form-label mt-3"
-                >Ngày hiệu lực <span class="required">*</span></label
+                >Ngày bắt đầu / chuyển <span class="required">*</span></label
               ><input
                 id="enrollmentDateInput"
                 type="date"
@@ -505,8 +658,7 @@
               <div class="modal-note mt-3">
                 <span data-icon="info"></span
                 ><span
-                  >Yêu cầu sẽ ở trạng thái chờ duyệt. Học sinh chỉ chuyển sang
-                  lớp mới sau khi được phê duyệt.</span
+                  >Thao tác được lưu trực tiếp. Khi chuyển lớp, lớp cũ kết thúc vào ngày trước ngày chuyển.</span
                 >
               </div>
             </div>
@@ -518,7 +670,7 @@
               >
                 Hủy</button
               ><button type="submit" class="btn btn-primary">
-                Tạo yêu cầu
+                Xếp lớp
               </button>
             </div>
           </form>
@@ -604,5 +756,6 @@
     </div>
     <script src="/vendor/bootstrap/bootstrap.bundle.min.js"></script>
     <script type="module" src="/js/school.js"></script>
+    <script type="module" src="/js/grade10.js"></script>
   </body>
 </html>

@@ -41,13 +41,13 @@ public class GuardianController {
     }
 
     @GetMapping("/{maNGH}")
-    @PreAuthorize("hasAnyRole('ADMIN', 'BGH', 'GIAO_VU', 'GIAO_VIEN', 'TEACHER')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'BGH', 'GIAO_VU')")
     public GuardianResponse getGuardianById(@PathVariable Long maNGH) {
         return guardianService.getGuardianById(maNGH);
     }
 
     @GetMapping
-    @PreAuthorize("hasAnyRole('ADMIN', 'BGH', 'GIAO_VU', 'GIAO_VIEN', 'TEACHER')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'BGH', 'GIAO_VU')")
     public List<GuardianResponse> getAllGuardians() {
         return guardianService.getAllGuardians();
     }
@@ -65,8 +65,14 @@ public class GuardianController {
     }
 
     @GetMapping("/student/{maHS}")
-    @PreAuthorize("hasAnyRole('ADMIN', 'BGH', 'GIAO_VU', 'GIAO_VIEN', 'TEACHER')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'BGH', 'GIAO_VU')")
     public List<GuardianResponse> getGuardiansByStudent(@PathVariable Long maHS) {
         return guardianService.getGuardiansByStudent(maHS);
+    }
+
+    @GetMapping("/{maNGH}/students")
+    @PreAuthorize("hasAnyRole('ADMIN', 'BGH', 'GIAO_VU')")
+    public List<com.example.highschool_management.dto.response.StudentOfGuardianResponse> getStudentsByGuardian(@PathVariable Long maNGH) {
+        return guardianService.getStudentsByGuardian(maNGH);
     }
 }

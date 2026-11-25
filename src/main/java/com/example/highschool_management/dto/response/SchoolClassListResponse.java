@@ -9,4 +9,7 @@ public record SchoolClassListResponse(
     String namHoc,
     int soKhoi,
     String trangThai,
+    Long maToHop,
+    Integer siSoToiDa,
+    Integer thuTuXep,
     long siSo) {}

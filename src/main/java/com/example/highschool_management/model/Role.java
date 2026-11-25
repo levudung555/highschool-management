@@ -11,7 +11,7 @@ import lombok.experimental.FieldDefaults;
 @FieldDefaults(level = AccessLevel.PRIVATE)
 public class Role {
     Long id;            // MaVT
-    String name;        // MaSoVaiTro (e.g. ADMIN, TEACHER, STUDENT)
+    String name;        // MaSoVaiTro (e.g. ADMIN, GIAO_VIEN, STUDENT)
     String description; // TenVaiTro
 
     public Role(String name) {

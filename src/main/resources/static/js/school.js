@@ -1,8 +1,14 @@
 import { mountRecords, configureRecords, renderRecords } from "./records.js";
+import { mountHomeroom, configureHomeroom, loadHomeroom } from "./homeroom.js";
+import { mountTeaching, configureTeaching, loadTeaching } from "./teaching.js";
+import { configureGrade10 } from "./grade10.js";
 import { authorizedFetch, currentUser, logout } from "./auth.js";
+import { enrollmentStudents, enrollmentHistories, studentHistory, inSchoolYear, matchesKeyword, enrollmentPage } from "./enrollment-api.js";
 // Giao diện Bootstrap; API cùng origin với Spring Boot, không cần CORS hoặc frontend server.
 const $ = (id) => document.getElementById(id);
 mountRecords();
+mountHomeroom();
+mountTeaching();
 const paths = {
   logout: '<path d="M9 3H4v18h5M13 8l5 4-5 4m-5-4h10"/>',
   school:
@@ -73,13 +79,49 @@ const state = {
   classPage: 0,
   requestPage: 0,
   rosterPage: 0,
-  requestStatus: "CHO_DUYET",
+  transferSource: null,
   classRows: [],
   requestRows: [],
   rosterRows: [],
   students: new Map(),
   seq: {},
 };
+const viewRoles = {
+  home: ["ADMIN", "BGH", "GIAO_VU"],
+  students: ["ADMIN", "BGH", "GIAO_VU"],
+  teachers: ["ADMIN", "BGH", "GIAO_VU"],
+  guardians: ["ADMIN", "BGH", "GIAO_VU"],
+  classes: ["ADMIN", "BGH", "GIAO_VU"],
+  roster: ["ADMIN", "BGH", "GIAO_VU"],
+  requests: ["ADMIN", "BGH", "GIAO_VU"],
+  history: ["ADMIN", "BGH", "GIAO_VU"],
+  attendance: ["ADMIN", "BGH", "GIAO_VU", "GIAO_VIEN"],
+  homeroom: ["ADMIN", "BGH", "GIAO_VU"],
+  teaching: ["ADMIN", "BGH", "GIAO_VU"],
+};
+const viewOrder = Object.keys(viewRoles);
+const hasAnyRole = (user, roles) =>
+  (user?.vaiTro || []).some((role) => roles.includes(role));
+function applyRoleNavigation(user) {
+  const allowed = viewOrder.filter((view) => hasAnyRole(user, viewRoles[view]));
+  document.querySelectorAll("[data-view]").forEach((link) => {
+    link.hidden = !allowed.includes(link.dataset.view);
+  });
+  document.querySelector(".side-nav").hidden = allowed.length === 0;
+  document.querySelector(".nav-label").hidden = allowed.length === 0;
+  return allowed;
+}
+function showNoAccess() {
+  document.querySelectorAll(".view-panel").forEach((panel) => (panel.hidden = true));
+  $("breadcrumb").textContent = "Chưa được cấp quyền";
+  $("globalError").textContent =
+    "Tài khoản chưa được cấp quyền vào màn hình nào trong ứng dụng này. Vui lòng liên hệ quản trị viên.";
+  $("globalError").classList.remove("alert-danger");
+  $("globalError").classList.add("alert-info");
+  $("globalError").classList.remove("d-none");
+  $("connection").textContent = "Chưa cấp quyền";
+  $("connection").className = "connection-pill disconnected";
+}
 const modal = (name) => bootstrap.Modal.getOrCreateInstance($(name));
 function setError(container, message) {
   const el = container.querySelector(".form-error");
@@ -151,9 +193,6 @@ const status = (value) => {
   const map = {
     HOAT_DONG: ["Đang hoạt động", ""],
     NGUNG_HOAT_DONG: ["Ngừng hoạt động", "stopped"],
-    CHO_DUYET: ["Chờ duyệt", "pending"],
-    DA_DUYET: ["Đã duyệt", ""],
-    TU_CHOI: ["Đã từ chối", "rejected"],
   };
   const [label, css] = map[value] || [value, "stopped"];
   return `<span class="status-badge ${css}">${escapeHtml(label)}</span>`;
@@ -191,7 +230,7 @@ function pager(id, data, onPage) {
   }
   buttons += `<button class="page-button" data-page="${p + 1}" ${p + 1 >= pages ? "disabled" : ""} aria-label="Trang tiếp">›</button>`;
   $(id).innerHTML =
-    `<span>Hiển thị <strong>${fmt(start)}–${fmt(end)}</strong> trong ${fmt(total)} ${id === "classPager" ? "lớp học" : id === "rosterPager" ? "học sinh" : "yêu cầu"}</span><div class="pager-buttons">${buttons}</div>`;
+    `<span>Hiển thị <strong>${fmt(start)}–${fmt(end)}</strong> trong ${fmt(total)} ${id === "classPager" ? "lớp học" : id === "rosterPager" ? "học sinh" : "phân lớp"}</span><div class="pager-buttons">${buttons}</div>`;
   $(id)
     .querySelectorAll("[data-page]")
     .forEach((button) =>
@@ -213,9 +252,7 @@ function selectOptions(id, items, label, value, placeholder) {
       .join("");
   if ([...el.options].some((o) => o.value === old)) el.value = old;
 }
-function mayApprove() {
-  return Boolean(state.user?.vaiTro.some((r) => r === "ADMIN" || r === "BGH"));
-}
+
 function className(id) {
   const c = state.classes.find((c) => c.maLop === Number(id));
   return c ? `${c.tenLop} · ${c.namHoc}` : `Lớp #${id}`;
@@ -297,7 +334,7 @@ async function loadRoster(page = state.rosterPage) {
       "rosterRows",
       5,
       "Chọn lớp học để bắt đầu",
-      "Danh sách sẽ hiển thị học sinh đã được duyệt và còn thuộc lớp tại ngày chọn.",
+      "Danh sách sẽ hiển thị học sinh còn thuộc lớp tại ngày chọn.",
     );
     $("rosterPager").textContent = "";
     return;
@@ -317,7 +354,7 @@ async function loadRoster(page = state.rosterPage) {
         "rosterRows",
         5,
         "Lớp chưa có học sinh tại ngày này",
-        "Tạo yêu cầu xếp lớp và phê duyệt để học sinh xuất hiện trong danh sách.",
+        "Xếp lớp để học sinh xuất hiện từ ngày bắt đầu.",
       );
     else
       $("rosterRows").innerHTML = result.danhSach
@@ -341,60 +378,53 @@ async function loadRoster(page = state.rosterPage) {
     }
   }
 }
+// Danh sách phân lớp đã ghi nhận; không còn bước duyệt yêu cầu.
 async function loadRequests(page = state.requestPage) {
   state.requestPage = page;
-  const seq = (state.seq.requests = (state.seq.requests || 0) + 1);
-  loading("requestRows", 5);
+  const seq = state.seq.requests = (state.seq.requests || 0) + 1;
+  loading("requestRows", 6);
   try {
-    const result = await api(
-      "/enrollments?" +
-        query({
-          tuKhoa: $("requestKeyword").value,
-          trang: page,
-          kichThuoc: 8,
-        }),
-    );
+    const keyword = $("requestKeyword").value;
+    const year = $("enrollmentListYear").value;
+    const students = await enrollmentStudents();
     if (seq !== state.seq.requests) return;
-    if (result.tongSoPhanTu && page >= result.tongSoTrang)
-      return loadRequests(Math.max(0, result.tongSoTrang - 1));
+    const histories = await enrollmentHistories(students);
+    const rows = [...histories.values()].flat()
+      .filter(row => inSchoolYear(row, year, state.classes) && matchesKeyword(row, keyword))
+      .sort((a, b) => b.maXepLop - a.maXepLop);
+    const result = enrollmentPage(rows, page, 8);
+    if (seq !== state.seq.requests) return;
+    state.requestPage = result.trang;
     state.requestRows = result.danhSach;
-    if (!result.danhSach.length)
-      empty(
-        "requestRows",
-        5,
-        "Không có bản ghi xếp lớp phù hợp",
-        "Bạn có thể thực hiện xếp hoặc chuyển lớp cho học sinh.",
-      );
-    else
-      $("requestRows").innerHTML = result.danhSach
-        .map(
-          (r) =>
-            `<tr><td><div class="student-identity"><span class="student-avatar">${escapeHtml(
-              r.hoTen
-                .split(" ")
-                .filter(Boolean)
-                .slice(-2)
-                .map((x) => x[0])
-                .join(""),
-            )}</span><div><strong>${escapeHtml(r.hoTen)}</strong><small>${escapeHtml(r.maSoHocSinh)}</small></div></div></td><td><span class="type-label">${icon(r.maXepLopNguon ? "transfer" : "plus")}${r.maXepLopNguon ? "Chuyển lớp" : "Xếp lớp"}</span><small class="subtle-label">Mã #${r.maXepLop}</small></td><td><strong>${escapeHtml(r.tenLop)}</strong><small class="d-block subtle-label mt-1">${escapeHtml(r.namHoc)}</small></td><td>${date(r.tuNgay)}</td><td><div class="row-actions"><button class="btn icon-button" data-action="detail" data-id="${r.maXepLop}" aria-label="Chi tiết #${r.maXepLop}" title="Chi tiết">${icon("eye")}</button></div></td></tr>`,
-        )
-        .join("");
-    pager("requestPager", result, (p) => loadRequests(p));
-  } catch (error) {
-    if (seq === state.seq.requests) {
-      tableError("requestRows", 5, error);
-      $("requestPager").textContent = "";
-    }
-  }
+    $("requestRows").innerHTML = result.danhSach.map(r => `<tr>
+      <td><strong>${escapeHtml(r.hoTen)}</strong><small class="d-block">${escapeHtml(r.maSoHocSinh)}</small></td>
+      <td>#${r.maXepLop}</td><td>${escapeHtml(r.tenLop)}<small class="d-block">${escapeHtml(r.namHoc)}</small></td>
+      <td>${date(r.tuNgay)}</td><td>${date(r.denNgay)}</td>
+      <td><button class="btn btn-outline-primary" data-action="detail" data-id="${r.maXepLop}">Chi tiết</button></td>
+    </tr>`).join("");
+    if (!result.danhSach.length) empty("requestRows", 6, "Chưa có phân lớp phù hợp", "Chọn Xếp lớp để bắt đầu.");
+    pager("requestPager", result, p => loadRequests(p));
+  } catch (error) { if (seq === state.seq.requests) {
+    tableError("requestRows", 6, error);
+    $("requestPager").textContent = "";
+  } }
 }
 async function loadStudents(target, keyword = "", selected = null) {
   const seq = (state.seq[target] = (state.seq[target] || 0) + 1);
+  $(target).disabled = true;
+  if (target === "studentInput") state.transferSource = null;
   try {
-    const result = await api(
-      "/enrollments/students?" + query({ tuKhoa: keyword, kichThuoc: 30 }),
-    );
+    const year = target === "studentInput" && $("enrollmentKind").value === "enroll"
+      ? $("enrollmentYear").value : null;
+    const students = await enrollmentStudents();
     if (seq !== state.seq[target]) return;
-    const items = result.danhSach;
+    let items = students.filter(student => matchesKeyword(student, keyword));
+    if (year) {
+      const histories = await enrollmentHistories(items);
+      items = items.filter(student => !histories.get(student.maHocSinh)
+        .some(row => inSchoolYear(row, year, state.classes)));
+    }
+    if (seq !== state.seq[target]) return;
     if (selected && !items.some((s) => s.maHocSinh === selected.maHocSinh))
       items.unshift(selected);
     items.forEach((s) => state.students.set(s.maHocSinh, s));
@@ -407,7 +437,12 @@ async function loadStudents(target, keyword = "", selected = null) {
     );
     if (selected) $(target).value = selected.maHocSinh;
   } catch (error) {
-    if (seq === state.seq[target]) throw error;
+    if (seq === state.seq[target]) {
+      $(target).innerHTML = '<option value="">Không tải được danh sách học sinh</option>';
+      throw error;
+    }
+  } finally {
+    if (seq === state.seq[target]) $(target).disabled = false;
   }
 }
 async function loadHistory() {
@@ -421,7 +456,7 @@ async function loadHistory() {
   $("historyTimeline").innerHTML =
     '<div class="empty-state">Đang tải lịch sử…</div>';
   try {
-    const data = await api(`/students/${id}/enrollments`);
+    const data = await studentHistory(id);
     if (seq !== state.seq.history) return;
     const student = state.students.get(Number(id));
     $("historyTitle").textContent = student
@@ -433,11 +468,16 @@ async function loadHistory() {
         data
           .map(
             (e) =>
-              `<article class="timeline-item"><span class="timeline-dot"></span><h3>${escapeHtml(className(e.maLop))}</h3><p>${icon("clock")} ${date(e.tuNgay)} → ${date(e.denNgay)}</p><p>${e.maXepLopNguon ? `Chuyển từ phân lớp #${e.maXepLopNguon}` : "Xếp lớp"} · Mã #${e.maXepLop}</p>${e.lyDoChuyen ? `<p>Lý do chuyển: ${escapeHtml(e.lyDoChuyen)}</p>` : ""}${e.lyDoKetThuc ? `<p>Kết thúc: ${escapeHtml(e.lyDoKetThuc)}</p>` : ""}</article>`,
+              `<article class="timeline-item"><span class="timeline-dot"></span>
+                <h3>${escapeHtml(e.tenLop)} · ${escapeHtml(e.namHoc)}</h3>
+                <p>${date(e.tuNgay)} → ${date(e.denNgay)}</p>
+                <p>${escapeHtml(e.lyDoKetThuc || "Chưa có lý do kết thúc")}</p>
+                <p>Người thực hiện: ${escapeHtml(e.tenNguoiThucHien)} · ${escapeHtml(e.thoiDiemThucHien?.replace("T", " "))}</p>
+              </article>`,
           )
           .join("") +
         "</div>"
-      : `<div class="empty-state"><div class="empty-symbol">${icon("history")}</div><strong>Chưa có lịch sử xếp lớp</strong><p>Tạo xếp lớp để bắt đầu hành trình học tập.</p></div>`;
+      : `<div class="empty-state"><div class="empty-symbol">${icon("history")}</div><strong>Chưa có lịch sử xếp lớp</strong><p>Xếp lớp để bắt đầu lịch sử học tập.</p></div>`;
   } catch (error) {
     if (seq === state.seq.history)
       $("historyTimeline").innerHTML =
@@ -445,19 +485,14 @@ async function loadHistory() {
   }
 }
 async function route() {
-  const view = location.hash.slice(1);
-  state.view = [
-    "home",
-    "students",
-    "teachers",
-    "guardians",
-    "classes",
-    "roster",
-    "requests",
-    "history",
-  ].includes(view)
-    ? view
-    : "home";
+  if (!state.user) return;
+  const allowed = viewOrder.filter((view) => hasAnyRole(state.user, viewRoles[view]));
+  if (!allowed.length) return showNoAccess();
+  const requested = location.hash.slice(1);
+  state.view = allowed.includes(requested) ? requested : allowed[0];
+  if (requested !== state.view) {
+    history.replaceState(null, "", `${location.pathname}${location.search}#${state.view}`);
+  }
   const names = {
     home: "Trang chủ",
     students: "Học sinh & tìm kiếm",
@@ -465,8 +500,11 @@ async function route() {
     guardians: "Người giám hộ",
     classes: "Lớp học",
     roster: "Danh sách lớp",
-    requests: "Yêu cầu & phê duyệt",
+    requests: "Xếp lớp & chuyển lớp",
     history: "Lịch sử học sinh",
+    attendance: "Điểm danh học sinh",
+    homeroom: "Phân công chủ nhiệm",
+    teaching: "Phân công giảng dạy",
   };
   $("breadcrumb").textContent = names[state.view];
   document.title = `${names[state.view]} · Schoolspace`;
@@ -481,9 +519,18 @@ async function route() {
   bootstrap.Offcanvas.getInstance($("sidebar"))?.hide();
   if (!state.catalog) return;
   await renderRecords(state.view);
+  if (state.view === "homeroom") {
+    configureHomeroom(state.user, state.catalog, state.classes);
+    await loadHomeroom();
+  }
+  if (state.view === "teaching") {
+    configureTeaching(state.user, state.catalog);
+    await loadTeaching();
+  }
   if (state.view === "classes") await loadClasses();
   if (state.view === "roster") await loadRoster();
   if (state.view === "requests") await loadRequests();
+  if (state.view === "attendance") await loadAttendanceInit();
   if (state.view === "history") {
     const selected = sessionStorage.getItem("school.historyStudent");
     if (selected) {
@@ -540,50 +587,86 @@ function openClass(id = null) {
   }
   modal("classModal").show();
 }
+// Giới hạn ngày theo năm học. Server luôn kiểm tra lại các điều kiện này.
 function updateEnrollmentDate() {
-  const c = state.classes.find(
-    (c) => c.maLop === Number($("enrollmentClassInput").value),
-  );
-  const year = state.catalog.namHoc.find((y) => y.maNamHoc === c?.maNamHoc);
+  const year = state.catalog.namHoc.find(y => y.maNamHoc === Number($("enrollmentYear").value));
   const input = $("enrollmentDateInput");
-  input.min =
-    year && year.batDau > state.catalog.homNay
-      ? year.batDau
-      : state.catalog.homNay;
+  input.min = year && year.batDau > state.catalog.homNay ? year.batDau : state.catalog.homNay;
   input.max = year?.ketThuc || "";
-  if (input.value < input.min) input.value = input.min;
+  if (!input.value || input.value < input.min) input.value = input.min;
 }
-async function openEnrollment(kind, student = null) {
-  if (!state.catalog) {
-    globalError(
-      new Error("Chưa kết nối hệ thống. Vui lòng tải lại dữ liệu trước."),
-    );
+
+function filterEnrollmentClasses() {
+  const sourceClass = state.classes.find(c => c.maLop === state.transferSource?.maLop);
+  const items = state.classes.filter(c => c.trangThai === "HOAT_DONG"
+    && c.maNamHoc === Number($("enrollmentYear").value)
+    && c.maKhoi === Number($("enrollmentGrade").value)
+    && (!sourceClass || (c.maLop !== sourceClass.maLop && c.maKhoi === sourceClass.maKhoi)));
+  selectOptions("enrollmentClassInput", items, c => c.tenLop, c => c.maLop,
+    items.length ? "Chọn lớp đích" : "Không có lớp hoạt động phù hợp năm học và khối");
+}
+
+// Tìm đúng lớp tại ngày chuyển, không dùng riêng DenNgay IS NULL.
+async function updateTransferSource() {
+  if ($("enrollmentKind").value !== "transfer") return;
+  state.transferSource = null;
+  const seq = state.seq.transferSource = (state.seq.transferSource || 0) + 1;
+  const id = $("studentInput").value;
+  $("currentClassLabel").hidden = false;
+  $("currentClassLabel").textContent = "Chọn học sinh để xem lớp hiện tại.";
+  if (!id) { filterEnrollmentClasses(); return; }
+  const history = await studentHistory(id);
+  if (seq !== state.seq.transferSource) return;
+  const day = $("enrollmentDateInput").value;
+  const year = state.catalog.namHoc.find(y => y.maNamHoc === Number($("enrollmentYear").value));
+  if (!year || day < year.batDau || day > year.ketThuc || day < state.catalog.homNay) {
+    $("currentClassLabel").textContent = "Chọn ngày chuyển không ở quá khứ và nằm trong năm học.";
+    filterEnrollmentClasses();
     return;
   }
+  const matches = history.filter(e => {
+    const c = state.classes.find(c => c.maLop === e.maLop);
+    return c?.maNamHoc === Number($("enrollmentYear").value)
+      && e.tuNgay <= day && (!e.denNgay || e.denNgay >= day);
+  });
+  if (matches.length === 1) {
+    const source = matches[0];
+    const c = state.classes.find(c => c.maLop === source.maLop);
+    $("currentClassLabel").textContent = `Lớp tại ngày chuyển: ${c.tenLop}`
+      + (source.denNgay ? " — đã có ngày kết thúc, không thể chuyển tiếp bản ghi này." : "");
+    if (!source.denNgay && day > source.tuNgay) state.transferSource = source;
+    if (day <= source.tuNgay)
+      $("currentClassLabel").textContent += ` — ngày chuyển phải từ ${date(addDay(source.tuNgay))}.`;
+    $("enrollmentGrade").value = c.maKhoi;
+  } else $("currentClassLabel").textContent = "Không xác định được một lớp duy nhất tại ngày chuyển trong năm học đã chọn.";
+  filterEnrollmentClasses();
+}
+
+async function openEnrollment(kind, student = null) {
+  if (!state.catalog) return globalError(new Error("Vui lòng tải lại dữ liệu trước."));
   const form = $("enrollmentForm");
-  form.reset();
-  clearErrors(form);
+  form.reset(); clearErrors(form);
+  state.transferSource = null;
   $("enrollmentKind").value = kind;
-  $("enrollmentModalTitle").textContent =
-    kind === "transfer" ? "Tạo yêu cầu chuyển lớp" : "Xếp học sinh vào lớp";
+  $("enrollmentModalTitle").textContent = kind === "transfer" ? "Chuyển lớp trực tiếp" : "Xếp lớp lần đầu";
+  form.querySelector('[type="submit"]').textContent = kind === "transfer" ? "Chuyển lớp" : "Xếp lớp";
   $("transferReasonField").hidden = kind !== "transfer";
   $("transferReasonInput").required = kind === "transfer";
-  classOptions(
-    "enrollmentClassInput",
-    true,
-    kind === "transfer" ? "Chọn lớp đích" : "Chọn lớp học",
-  );
-  if (kind === "enroll" && $("rosterClass").value)
-    $("enrollmentClassInput").value = $("rosterClass").value;
-  $("enrollmentDateInput").value =
-    kind === "transfer" ? addDay(state.catalog.homNay) : state.catalog.homNay;
-  updateEnrollmentDate();
+  $("currentClassLabel").hidden = kind !== "transfer";
+  $("enrollmentGrade").disabled = kind === "transfer";
+  const rosterClass = state.classes.find(c => c.maLop === Number($("rosterClass").value));
+  const year = state.catalog.namHoc.find(y => y.batDau <= state.catalog.homNay && y.ketThuc >= state.catalog.homNay)
+    || state.catalog.namHoc.find(y => y.ketThuc >= state.catalog.homNay);
+  const rosterYear = student && rosterClass && state.catalog.namHoc.find(y => y.maNamHoc === rosterClass.maNamHoc && y.ketThuc >= state.catalog.homNay);
+  $("enrollmentYear").value = (rosterYear || year)?.maNamHoc || "";
+  $("enrollmentGrade").value = (student && rosterClass ? rosterClass.maKhoi : state.catalog.khoi[0]?.maKhoi) || "";
+  $("enrollmentDateInput").value = kind === "transfer" ? addDay(state.catalog.homNay) : state.catalog.homNay;
+  updateEnrollmentDate(); filterEnrollmentClasses();
   modal("enrollmentModal").show();
   try {
-    await loadStudents("studentInput", "", student);
-  } catch (error) {
-    setError(form, error.message);
-  }
+    await loadStudents("studentInput", "", kind === "transfer" ? student : null);
+    await updateTransferSource();
+  } catch (error) { setError(form, error.message); }
 }
 let confirmTask = null;
 function confirmAction(title, message, action, danger = false) {
@@ -597,37 +680,18 @@ function confirmAction(title, message, action, danger = false) {
   modal("confirmModal").show();
 }
 async function detail(id) {
+  $("detailTitle").textContent = `Phân lớp #${id}`;
   $("detailBody").textContent = "Đang tải…";
-  $("detailTitle").textContent = `Yêu cầu #${id}`;
   modal("detailModal").show();
   try {
     const e = await api(`/enrollments/${id}`);
-    const s = state.requestRows.find((r) => r.maXepLop === id);
-    const fields = [
-      [
-        "Học sinh",
-        s ? `${s.hoTen} · ${s.maSoHocSinh}` : `Hồ sơ #${e.maHocSinh}`,
-      ],
-      ["Lớp đích", className(e.maLop)],
-      ["Hình thức", e.maXepLopNguon ? "Chuyển lớp" : "Xếp lớp"],
-      ["Ngày bắt đầu", date(e.tuNgay)],
-      ["Mốc kết thúc", date(e.denNgay)],
-      ["Phân lớp nguồn", e.maXepLopNguon ? `#${e.maXepLopNguon}` : "Không có"],
-      ["Lý do chuyển", e.lyDoChuyen || "—"],
-      ["Lý do kết thúc", e.lyDoKetThuc || "—"],
-    ];
-    $("detailBody").innerHTML =
-      '<dl class="detail-grid">' +
-      fields
-        .map(
-          ([k, v]) =>
-            `<div><dt>${escapeHtml(k)}</dt><dd>${escapeHtml(v)}</dd></div>`,
-        )
-        .join("") +
-      '</dl><p class="form-text mb-0">Mốc kết thúc là ngày học sinh không còn thuộc phân lớp.</p>';
-  } catch (error) {
-    $("detailBody").textContent = error.message;
-  }
+    const fields = [["Học sinh", e.hoTen], ["Lớp", e.tenLop], ["Năm học", e.namHoc],
+      ["Từ ngày", date(e.tuNgay)], ["Đến ngày (còn thuộc lớp)", date(e.denNgay)],
+      ["Lý do kết thúc", e.lyDoKetThuc || "—"], ["Người thực hiện", e.tenNguoiThucHien],
+      ["Thời điểm thực hiện", e.thoiDiemThucHien?.replace("T", " ")]];
+    $("detailBody").innerHTML = '<dl class="detail-grid">' + fields.map(([k,v]) =>
+      `<div><dt>${escapeHtml(k)}</dt><dd>${escapeHtml(v)}</dd></div>`).join("") + '</dl>';
+  } catch (error) { $("detailBody").textContent = error.message; }
 }
 function debounce(fn, delay = 300) {
   let timer;
@@ -671,18 +735,22 @@ $("enrollmentForm").addEventListener("submit", async (event) => {
   clearErrors(form);
   await busy(form.querySelector('[type="submit"]'), async () => {
     try {
+      if ($("studentInput").disabled) throw new Error("Vui lòng chờ tải danh sách học sinh.");
+      if (!form.reportValidity()) return;
       const transfer = $("enrollmentKind").value === "transfer";
-      const body = { maHocSinh: Number($("studentInput").value) };
+      const body = {};
       if (transfer) {
-        const history = await api(`/students/${body.maHocSinh}/enrollments`);
-        const source = history.find(entry => entry.denNgay == null);
-        if (!source) throw new Error("Học sinh chưa có phân lớp hiện tại.");
-        body.maXepLopHienTai = source.maXepLop;
-        delete body.maHocSinh;
+        await updateTransferSource();
+        if (!form.reportValidity()) return;
+        if (!state.transferSource || state.transferSource.maHocSinh !== Number($("studentInput").value))
+          throw new Error("Chọn học sinh có phân lớp nguồn hợp lệ trong năm học này.");
+        body.maXepLopHienTai = state.transferSource.maXepLop;
         body.maLopDich = Number($("enrollmentClassInput").value);
         body.ngayChuyen = $("enrollmentDateInput").value;
         body.lyDo = $("transferReasonInput").value.trim();
+        if (!body.lyDo) throw new Error("Nhập lý do chuyển lớp.");
       } else {
+        body.maHocSinh = Number($("studentInput").value);
         body.maLop = Number($("enrollmentClassInput").value);
         body.tuNgay = $("enrollmentDateInput").value;
       }
@@ -691,8 +759,8 @@ $("enrollmentForm").addEventListener("submit", async (event) => {
         { method: "POST", body: JSON.stringify(body) },
       );
       modal("enrollmentModal").hide();
-      toast(`Đã tạo yêu cầu #${result.maXepLop}. Yêu cầu đang chờ duyệt.`);
-      state.requestStatus = "CHO_DUYET";
+      toast(`${transfer ? "Đã chuyển lớp" : "Đã xếp lớp"}. Có hiệu lực từ ${date(result.tuNgay)}.`);
+      await loadAllClasses();
       state.requestPage = 0;
       if (location.hash === "#requests") await loadRequests(0);
       else location.hash = "requests";
@@ -744,30 +812,13 @@ document.addEventListener("click", async (event) => {
       case "detail":
         await detail(id);
         break;
-      case "approve":
-      case "reject": {
-        const approve = target.dataset.action === "approve";
-        const r = state.requestRows.find((r) => r.maXepLop === id);
-        confirmAction(
-          approve ? "Duyệt yêu cầu" : "Từ chối yêu cầu",
-          `${approve ? "Phê duyệt" : "Từ chối"} yêu cầu #${id} của ${r.hoTen}? ${approve && r.maXepLopNguon ? "Phân lớp cũ sẽ kết thúc tại ngày chuyển." : ""}`,
-          async () => {
-            await api(
-              `/enrollments/${id}/${approve ? "approval" : "rejection"}`,
-              { method: "PUT" },
-            );
-            toast(approve ? "Đã phê duyệt yêu cầu." : "Đã từ chối yêu cầu.");
-          },
-          !approve,
-        );
-        break;
-      }
       case "student-transfer": {
         const s = state.rosterRows.find((s) => s.maHocSinh === id);
         await openEnrollment("transfer", s);
         const next = addDay(s.tuNgay);
         if ($("enrollmentDateInput").value < next)
           $("enrollmentDateInput").value = next;
+        await updateTransferSource();
         break;
       }
       case "student-history": {
@@ -785,6 +836,16 @@ document.addEventListener("click", async (event) => {
 $("addClassBtn").addEventListener("click", () => openClass());
 $("newEnrollBtn").addEventListener("click", () => openEnrollment("enroll"));
 $("newTransferBtn").addEventListener("click", () => openEnrollment("transfer"));
+// Cập nhật bộ chọn lớp và danh sách phân lớp sau khi lưu từ khung xếp lớp 10.
+document.addEventListener("grade10-classes-changed", async () => {
+  try {
+    await loadAllClasses();
+    configureRecords(state.user, state.catalog, state.classes);
+    if (state.view === "requests") await loadRequests(0);
+  } catch (error) {
+    globalError(error);
+  }
+});
 $("rosterEnrollBtn").addEventListener("click", () => openEnrollment("enroll"));
 $("classFilters").addEventListener("submit", (e) => {
   e.preventDefault();
@@ -809,12 +870,7 @@ $("requestKeyword").addEventListener(
   "input",
   debounce(() => loadRequests(0)),
 );
-document.querySelectorAll("[data-request-status]").forEach((el) =>
-  el.addEventListener("click", () => {
-    state.requestStatus = el.dataset.requestStatus;
-    loadRequests(0);
-  }),
-);
+
 $("rosterFilters").addEventListener("submit", (e) => {
   e.preventDefault();
   loadRoster(0);
@@ -830,7 +886,17 @@ $("historySearch").addEventListener(
   debounce(() => loadStudents("historyStudent", $("historySearch").value)),
 );
 $("historyLoadBtn").addEventListener("click", () => loadHistory());
-$("enrollmentClassInput").addEventListener("change", updateEnrollmentDate);
+$("enrollmentYear").addEventListener("change", async () => {
+  try {
+    updateEnrollmentDate(); state.transferSource = null; filterEnrollmentClasses();
+    await loadStudents("studentInput", $("studentSearchInput").value);
+    await updateTransferSource();
+  } catch (error) { setError($("enrollmentForm"), error.message); }
+});
+$("enrollmentGrade").addEventListener("change", filterEnrollmentClasses);
+$("enrollmentListYear").addEventListener("change", () => loadRequests(0));
+["studentInput", "enrollmentDateInput"].forEach(id => $(id).addEventListener("change", () =>
+  updateTransferSource().catch(error => setError($("enrollmentForm"), error.message))));
 $("refreshBtn").addEventListener("click", () =>
   busy($("refreshBtn"), () => init()).catch(globalError),
 );
@@ -840,11 +906,19 @@ $("classModal").addEventListener("shown.bs.modal", () =>
 );
 async function init() {
   $("globalError").classList.add("d-none");
+  $("globalError").classList.remove("alert-info");
+  $("globalError").classList.add("alert-danger");
   try {
     const user = await currentUser();
     if (!user) return;
     state.user = user;
+    const allowedViews = applyRoleNavigation(user);
+    if (!allowedViews.length) {
+      showNoAccess();
+      return;
+    }
     $("actorLabel").textContent = user.hoTen;
+    configureGrade10(user);
     const roleNames = {
       ADMIN: "Quản trị viên",
       BGH: "Ban Giám hiệu",
@@ -867,6 +941,7 @@ async function init() {
       "addClassBtn",
       "newEnrollBtn",
       "newTransferBtn",
+      "toggleGrade10",
       "rosterEnrollBtn",
     ].forEach((id) => ($(id).disabled = !canManage));
     const c = await api("/classes/catalog");
@@ -908,13 +983,17 @@ async function init() {
       (g) => g.maKhoi,
       "Chọn khối",
     );
+    selectOptions("enrollmentYear", c.namHoc.filter(y => y.ketThuc >= c.homNay), y => y.ten, y => y.maNamHoc, "Chọn năm học");
+    selectOptions("enrollmentGrade", c.khoi, g => `Khối ${g.soKhoi}`, g => g.maKhoi, "Chọn khối");
+    selectOptions("enrollmentListYear", c.namHoc, y => y.ten, y => y.maNamHoc, "Tất cả năm học");
     const active = c.namHoc.find(
       (y) => y.batDau <= c.homNay && y.ketThuc >= c.homNay,
     );
     $("schoolYearLabel").textContent = active
       ? `Năm học hiện tại ${active.ten}`
       : "";
-    await loadAllClasses();
+    if (canManage) await loadAllClasses();
+    else state.classes = [];
     configureRecords(state.user, state.catalog, state.classes);
     await route();
   } catch (error) {
@@ -929,6 +1008,255 @@ async function init() {
     );
   }
 }
+// --- UC11: Điểm danh học sinh ---
+state.attendanceClasses = [];
+state.currentAttendanceSession = null;
+
+async function loadAttendanceInit() {
+  if (!$("attDate").value) {
+    $("attDate").value = state.catalog?.homNay || new Date().toISOString().slice(0, 10);
+  }
+  // Load danh sách năm học vào select
+  if ($("attYear") && state.catalog?.namHoc) {
+    const curVal = $("attYear").value;
+    selectOptions("attYear", state.catalog.namHoc, (y) => y.ten, (y) => y.maNamHoc, "Tất cả năm học");
+    if (curVal) $("attYear").value = curVal;
+  }
+  await loadAttendanceClasses();
+}
+
+async function loadAttendanceClasses() {
+  try {
+    const ngay = $("attDate").value || state.catalog?.homNay;
+    const classes = await api(`/attendance/classes?ngay=${ngay}`);
+    state.attendanceClasses = classes;
+    renderAttendanceClassOptions();
+  } catch (err) {
+    console.error("Không tải được danh sách lớp được phép điểm danh", err);
+  }
+}
+
+function renderAttendanceClassOptions() {
+  const yearFilter = $("attYear").value;
+  let filtered = state.attendanceClasses || [];
+  if (yearFilter) {
+    filtered = filtered.filter(c => String(c.maNH) === String(yearFilter));
+  }
+  const select = $("attClass");
+  const oldVal = select.value;
+  select.innerHTML = '<option value="">-- Chọn lớp học --</option>' +
+    filtered.map(c => {
+      let roleLabel = c.vaiTroPhuTrach === "CHU_NHIEM" ? " (CN)" : (c.vaiTroPhuTrach === "BO_MON" ? ` (${c.tenMonHoc || "Bộ môn"})` : "");
+      return `<option value="${c.maLop}" data-lmh="${c.maLMH || ''}">${escapeHtml(c.tenLop)} · ${escapeHtml(c.namHoc)}${roleLabel}</option>`;
+    }).join("");
+  if (oldVal && filtered.some(c => String(c.maLop) === String(oldVal))) {
+    select.value = oldVal;
+  }
+}
+
+$("attYear")?.addEventListener("change", () => renderAttendanceClassOptions());
+$("attDate")?.addEventListener("change", async () => {
+  await loadAttendanceClasses();
+});
+
+$("openAttendanceBtn")?.addEventListener("click", async () => {
+  const maLop = $("attClass").value;
+  if (!maLop) {
+    toast("Vui lòng chọn lớp học để điểm danh");
+    return;
+  }
+  const ngay = $("attDate").value;
+  const maKhung = $("attSession").value;
+  const opt = $("attClass").selectedOptions[0];
+  const maLMH = opt?.dataset.lmh || "";
+
+  $("openAttendanceBtn").disabled = true;
+  try {
+    let url = `/attendance/session?maLop=${maLop}&ngay=${ngay}&phamVi=BUOI&maKhung=${maKhung}`;
+    if (maLMH) url += `&maLMH=${maLMH}`;
+    const session = await api(url);
+    state.currentAttendanceSession = session;
+    renderAttendanceSession(session);
+  } catch (err) {
+    globalError(err);
+  } finally {
+    $("openAttendanceBtn").disabled = false;
+  }
+});
+
+function renderAttendanceSession(session) {
+  const card = $("attendanceListCard");
+  card.style.display = "block";
+  $("attStudentCount").textContent = `${session.danhSachHocSinh?.length || 0} học sinh`;
+
+  const isCreated = session.maPDD != null;
+  const isLocked = Boolean(session.daKhoa);
+
+  const badge = $("attSessionStatusBadge");
+  if (isLocked) {
+    badge.className = "badge bg-danger";
+    badge.textContent = "Đã chốt sổ (Khóa)";
+  } else if (isCreated) {
+    badge.className = "badge bg-success";
+    badge.textContent = "Đã lưu phiên";
+  } else {
+    badge.className = "badge bg-secondary";
+    badge.textContent = "Chưa lưu phiên";
+  }
+
+  let infoText = `Lớp: ${escapeHtml(session.tenLop)} | Ngày: ${date(session.ngay)} | Buổi: ${session.maKhung}`;
+  if (session.nguoiTao) {
+    infoText += ` | Người tạo: ${escapeHtml(session.nguoiTao)}`;
+  }
+  $("attSessionInfo").textContent = infoText;
+
+  // Cập nhật nút lưu
+  const saveBtn = $("btnSaveAttendance");
+  const saveBtnText = $("btnSaveAttendanceText");
+  if (isLocked) {
+    saveBtn.disabled = true;
+    saveBtnText.textContent = "Phiên đã chốt sổ";
+  } else {
+    saveBtn.disabled = false;
+    saveBtnText.textContent = isCreated ? "Cập nhật điểm danh" : "Lưu điểm danh";
+  }
+
+  // Khóa thao tác hàng loạt nếu đã khóa
+  $("btnBatchCoMat").disabled = isLocked;
+  $("btnBatchCoPhep").disabled = isLocked;
+  $("btnBatchKhongPhep").disabled = isLocked;
+  $("btnBatchReset").disabled = isLocked;
+
+  const rows = $("attendanceTableRows");
+  if (!session.danhSachHocSinh || session.danhSachHocSinh.length === 0) {
+    rows.innerHTML = `<tr><td colspan="6" class="text-center py-4 text-secondary">Lớp không có học sinh nào tại ngày ${date(session.ngay)}.</td></tr>`;
+    saveBtn.disabled = true;
+    return;
+  }
+
+  rows.innerHTML = session.danhSachHocSinh.map((hs, index) => {
+    const curStatus = hs.trangThai || "CO_MAT";
+    const curNote = hs.ghiChu || "";
+    return `
+      <tr data-maxl="${hs.maXL}">
+        <td class="text-secondary">${index + 1}</td>
+        <td><strong>${escapeHtml(hs.maSoHS)}</strong></td>
+        <td>${escapeHtml(hs.hoTen)}</td>
+        <td class="text-secondary small">${date(hs.ngaySinh)}</td>
+        <td>
+          <select class="form-select form-select-sm att-status-select" ${isLocked ? 'disabled' : ''}>
+            <option value="CO_MAT" ${curStatus === "CO_MAT" ? "selected" : ""}>Có mặt</option>
+            <option value="VANG_CO_PHEP" ${curStatus === "VANG_CO_PHEP" ? "selected" : ""}>Vắng có phép</option>
+            <option value="VANG_KHONG_PHEP" ${curStatus === "VANG_KHONG_PHEP" ? "selected" : ""}>Vắng không phép</option>
+            <option value="DI_MUON" ${curStatus === "DI_MUON" ? "selected" : ""}>Đi muộn</option>
+          </select>
+        </td>
+        <td>
+          <input type="text" maxlength="255" class="form-control form-control-sm att-note-input"
+            value="${escapeHtml(curNote)}" placeholder="Ghi chú (tùy chọn)" ${isLocked ? 'disabled' : ''} />
+        </td>
+      </tr>
+    `;
+  }).join("");
+
+  updateStatusColors();
+  rows.querySelectorAll(".att-status-select").forEach(sel => {
+    sel.addEventListener("change", updateStatusColors);
+  });
+}
+
+function updateStatusColors() {
+  $("attendanceTableRows").querySelectorAll("tr").forEach(tr => {
+    const sel = tr.querySelector(".att-status-select");
+    if (!sel) return;
+    sel.className = "form-select form-select-sm att-status-select";
+    if (sel.value === "CO_MAT") sel.classList.add("text-success", "border-success");
+    else if (sel.value === "VANG_CO_PHEP") sel.classList.add("text-warning", "border-warning");
+    else if (sel.value === "VANG_KHONG_PHEP") sel.classList.add("text-danger", "border-danger");
+    else if (sel.value === "DI_MUON") sel.classList.add("text-info", "border-info");
+  });
+}
+
+// Thao tác hàng loạt
+$("btnBatchCoMat")?.addEventListener("click", () => {
+  $("attendanceTableRows").querySelectorAll(".att-status-select").forEach(sel => sel.value = "CO_MAT");
+  updateStatusColors();
+});
+$("btnBatchCoPhep")?.addEventListener("click", () => {
+  $("attendanceTableRows").querySelectorAll(".att-status-select").forEach(sel => sel.value = "VANG_CO_PHEP");
+  updateStatusColors();
+});
+$("btnBatchKhongPhep")?.addEventListener("click", () => {
+  $("attendanceTableRows").querySelectorAll(".att-status-select").forEach(sel => sel.value = "VANG_KHONG_PHEP");
+  updateStatusColors();
+});
+$("btnBatchReset")?.addEventListener("click", () => {
+  if (state.currentAttendanceSession) {
+    renderAttendanceSession(state.currentAttendanceSession);
+  }
+});
+
+// Lưu điểm danh
+$("btnSaveAttendance")?.addEventListener("click", async () => {
+  const session = state.currentAttendanceSession;
+  if (!session) return;
+  const isCreated = session.maPDD != null;
+
+  const chiTiet = [];
+  let hasError = false;
+  $("attendanceTableRows").querySelectorAll("tr[data-maxl]").forEach(tr => {
+    const maXL = Number(tr.dataset.maxl);
+    const trangThai = tr.querySelector(".att-status-select").value;
+    const ghiChu = tr.querySelector(".att-note-input").value.trim();
+    if (ghiChu.length > 255) {
+      toast("Ghi chú của học sinh không được dài quá 255 ký tự");
+      hasError = true;
+    }
+    chiTiet.push({ maXL, trangThai, ghiChu });
+  });
+
+  if (hasError) return;
+
+  $("btnSaveAttendance").disabled = true;
+  try {
+    let resSession;
+    if (!isCreated) {
+      const payload = {
+        maLop: session.maLop,
+        maHK: session.maHK,
+        maLMH: session.maLMH,
+        ngay: session.ngay,
+        phamVi: session.phamVi,
+        maKhung: session.maKhung,
+        chiTiet: chiTiet
+      };
+      resSession = await api("/attendance/session", {
+        method: "POST",
+        body: JSON.stringify(payload)
+      });
+      toast("Tạo và lưu phiên điểm danh thành công!");
+    } else {
+      const payload = { chiTiet: chiTiet };
+      resSession = await api(`/attendance/session/${session.maPDD}`, {
+        method: "PUT",
+        body: JSON.stringify(payload)
+      });
+      toast("Cập nhật điểm danh thành công!");
+    }
+    state.currentAttendanceSession = resSession;
+    renderAttendanceSession(resSession);
+  } catch (err) {
+    globalError(err);
+  } finally {
+    $("btnSaveAttendance").disabled = false;
+  }
+});
+
+$("attendanceLookupBtn")?.addEventListener("click", () => {
+  toast("Điều hướng sang UC12 - Tra cứu chuyên cần");
+  // Có thể chuyển tab hoặc mở thông báo
+});
+
 $("logoutBtn").addEventListener("click", () => logout());
 icons();
 route();

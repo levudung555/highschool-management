@@ -21,6 +21,7 @@ public class GuardianMapper {
         var response = new GuardianResponse();
         response.setMaNGH(guardian.getMaNGH());
         response.setHoTen(guardian.getHoTen());
+        response.setCmnd(guardian.getCmnd());
         response.setSdt(guardian.getSdt());
         response.setDiaChi(guardian.getDiaChi());
         return response;

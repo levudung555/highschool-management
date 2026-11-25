@@ -19,12 +19,13 @@ public class GuardianDaoImpl implements GuardianDao {
 
     @Override
     public Guardian insertGuardian(Guardian guardian) {
-        String sql = "INSERT INTO nguoi_giam_ho (HoTen, SoDienThoai, DiaChi) VALUES (?, ?, ?)";
+        String sql = "INSERT INTO nguoi_giam_ho (HoTen, CMND, SoDienThoai, DiaChi) VALUES (?, ?, ?, ?)";
         try (Connection conn = JdbcConnect.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
             ps.setString(1, guardian.getHoTen());
-            ps.setString(2, guardian.getSdt());
-            ps.setString(3, guardian.getDiaChi());
+            ps.setString(2, guardian.getCmnd());
+            ps.setString(3, guardian.getSdt());
+            ps.setString(4, guardian.getDiaChi());
             ps.executeUpdate();
             try (ResultSet rs = ps.getGeneratedKeys()) {
                 if (rs.next()) {
@@ -82,6 +83,26 @@ public class GuardianDaoImpl implements GuardianDao {
             }
         } catch (Exception e) {
             throw new RuntimeException("Lỗi khi tìm người giám hộ theo mã", e);
+        }
+        return Optional.empty();
+    }
+
+    @Override
+    public Optional<Guardian> findByCMND(String cmnd) {
+        if (cmnd == null || cmnd.isBlank()) {
+            return Optional.empty();
+        }
+        String sql = "SELECT * FROM nguoi_giam_ho WHERE CMND = ?";
+        try (Connection conn = JdbcConnect.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setString(1, cmnd.trim());
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) {
+                    return Optional.of(mapResultSetToGuardian(rs));
+                }
+            }
+        } catch (Exception e) {
+            throw new RuntimeException("Lỗi khi tìm người giám hộ theo CMND/CCCD", e);
         }
         return Optional.empty();
     }
@@ -150,6 +171,7 @@ public class GuardianDaoImpl implements GuardianDao {
         Guardian guardian = new Guardian();
         guardian.setMaNGH(rs.getLong("MaNGH"));
         guardian.setHoTen(rs.getString("HoTen"));
+        guardian.setCmnd(rs.getString("CMND"));
         guardian.setDiaChi(rs.getString("DiaChi"));
         guardian.setSdt(rs.getString("SoDienThoai"));
         return guardian;

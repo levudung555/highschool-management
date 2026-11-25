@@ -4,6 +4,7 @@ import com.example.highschool_management.dto.ApiResponse;
 import com.example.highschool_management.dto.request.CreateStudentRequest;
 import com.example.highschool_management.dto.request.UpdateStudentRequest;
 import com.example.highschool_management.dto.response.StudentResponse;
+import com.example.highschool_management.dto.response.StudentDetailResponse;
 import com.example.highschool_management.service.StudentService;
 import jakarta.validation.Valid;
 import java.util.List;
@@ -37,7 +38,7 @@ public class StudentController {
   }
 
   @GetMapping("/search")
-  @PreAuthorize("hasAnyRole('ADMIN', 'BGH', 'GIAO_VU', 'GIAO_VIEN', 'TEACHER')")
+  @PreAuthorize("hasAnyRole('ADMIN', 'BGH', 'GIAO_VU')")
   public List<StudentResponse> searchStudents(
       @RequestParam(required = false) String maSoHS,
       @RequestParam(required = false) String hoTen,
@@ -48,9 +49,15 @@ public class StudentController {
   }
 
   @GetMapping
-  @PreAuthorize("hasAnyRole('ADMIN', 'BGH', 'GIAO_VU', 'GIAO_VIEN', 'TEACHER')")
+  @PreAuthorize("hasAnyRole('ADMIN', 'BGH', 'GIAO_VU')")
   public List<StudentResponse> getAllStudents() {
     return studentService.getAllStudents();
+  }
+
+  @GetMapping("/{maHS}")
+  @PreAuthorize("hasAnyRole('ADMIN', 'BGH', 'GIAO_VU')")
+  public StudentDetailResponse getStudentDetail(@PathVariable Long maHS) {
+    return studentService.getStudentDetail(maHS);
   }
 
   @DeleteMapping
@@ -62,9 +69,10 @@ public class StudentController {
   @PostMapping(value = "/import", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
   @PreAuthorize("hasAnyRole('ADMIN', 'BGH', 'GIAO_VU')")
   public ApiResponse<com.example.highschool_management.dto.response.ImportStudentResponse> importExcelStudent(
-      @RequestParam("file") MultipartFile file) throws java.io.IOException {
+      @RequestParam("file") MultipartFile file,
+      @RequestParam("maNamHoc") Long maNamHoc) throws java.io.IOException {
     return ApiResponse.<com.example.highschool_management.dto.response.ImportStudentResponse>builder()
-        .result(studentService.importStudents(file))
+        .result(studentService.importStudents(file, maNamHoc))
         .build();
   }
 }
