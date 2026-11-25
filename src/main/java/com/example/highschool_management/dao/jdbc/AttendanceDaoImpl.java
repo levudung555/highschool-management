@@ -321,6 +321,12 @@ public class AttendanceDaoImpl implements AttendanceDao {
     }
 
     @Override
+    public List<AttendanceRecord> layDiemDanhHienTaiTheoPhien(Long maPDD) {
+        String sql = "SELECT MaDD, MaPDD, MaXL, TrangThai, SoPhutMuon, GhiChu, MaTKCapNhat, CapNhatLuc FROM diem_danh WHERE MaPDD = ?";
+        return jdbc.query(sql, RECORD_MAPPER, maPDD);
+    }
+
+    @Override
     public Long taoPhienDiemDanh(AttendanceSession phien) {
         String sql = """
             INSERT INTO phien_diem_danh (MaLop, MaHK, MaLMH, Ngay, PhamVi, MaKhung, TrangThai, MaTKTao)
@@ -398,12 +404,6 @@ public class AttendanceDaoImpl implements AttendanceDao {
                 return chiTietList.size();
             }
         });
-    }
-
-    @Override
-    public List<AttendanceRecord> layDiemDanhHienTaiTheoPhien(Long maPDD) {
-        String sql = "SELECT MaDD, MaPDD, MaXL, TrangThai, SoPhutMuon, GhiChu, MaTKCapNhat, CapNhatLuc FROM diem_danh WHERE MaPDD = ?";
-        return jdbc.query(sql, RECORD_MAPPER, maPDD);
     }
 
     @Override

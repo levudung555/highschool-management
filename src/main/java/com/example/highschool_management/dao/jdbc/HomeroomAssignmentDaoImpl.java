@@ -78,6 +78,7 @@ public class HomeroomAssignmentDaoImpl implements HomeroomAssignmentDao {
         this.jdbcTemplate = jdbcTemplate;
     }
 
+    // Hai phân công đã giao nhau nếu có chung ít nhất một ngày. Ngày kết thúc để trống được tính đến cuối năm học.
     @Override
     public boolean coPhanCongTrungThoiGian(Long maLop, LocalDate ngayBatDau, LocalDate ngayKetThuc){
         String sql = """
@@ -93,6 +94,7 @@ public class HomeroomAssignmentDaoImpl implements HomeroomAssignmentDao {
         Long count = jdbcTemplate.queryForObject(sql, Long.class, maLop, ngayKetThuc, ngayBatDau);
         return count != null && count > 0;
     }
+    // Lưu phân công chủ nhiệm và trả về mã vừa tạo để đọc lại bản ghi.
     @Override
     public long tao(HomeroomAssignment phanCong){
         String sql = """
@@ -129,22 +131,7 @@ public class HomeroomAssignmentDaoImpl implements HomeroomAssignmentDao {
 
         return maDuocTao.longValue();
     }
-    @Override
-    public Optional<HomeroomAssignment> timTheoMa(Long maPhanCong){
-        String sql = SELECT_PHAN_CONG + " WHERE p.MaPCCN = ?";
-        List<HomeroomAssignment> ketQua = jdbcTemplate.query(sql, PHAN_CONG_MAPPER, maPhanCong);
-        if (ketQua.isEmpty()) {
-            return Optional.empty();
-        }
-        return Optional.of(ketQua.get(0));
-    }
-
-    @Override
-    public List<HomeroomAssignment> lichSuTheoLop(Long maLop){
-        String sql = SELECT_PHAN_CONG + " WHERE p.MaLop = ? ORDER BY p.TuNgay DESC";
-        return jdbcTemplate.query(sql, PHAN_CONG_MAPPER, maLop);
-    }
-
+    // Lưu thông tin của lần tạo phân công chủ nhiệm vào nhật ký hệ thống.
     @Override
     public void ghiNhatKyTao(
             Long maTaiKhoan,
@@ -204,6 +191,24 @@ public class HomeroomAssignmentDaoImpl implements HomeroomAssignmentDao {
                     "Không ghi được nhật ký phân công chủ nhiệm"
             );
         }
+    }
+
+    // Sắp lịch sử chủ nhiệm của lớp theo ngày bắt đầu, mới nhất trước.
+    @Override
+    public List<HomeroomAssignment> lichSuTheoLop(Long maLop){
+        String sql = SELECT_PHAN_CONG + " WHERE p.MaLop = ? ORDER BY p.TuNgay DESC";
+        return jdbcTemplate.query(sql, PHAN_CONG_MAPPER, maLop);
+    }
+
+    // Tìm đúng lần phân công theo mã chủ nhiệm, kể cả khi lớp đã đổi giáo viên.
+    @Override
+    public Optional<HomeroomAssignment> timTheoMa(Long maPhanCong){
+        String sql = SELECT_PHAN_CONG + " WHERE p.MaPCCN = ?";
+        List<HomeroomAssignment> ketQua = jdbcTemplate.query(sql, PHAN_CONG_MAPPER, maPhanCong);
+        if (ketQua.isEmpty()) {
+            return Optional.empty();
+        }
+        return Optional.of(ketQua.get(0));
     }
 
 }

@@ -57,35 +57,6 @@ public class AttendanceServiceImpl implements AttendanceService {
         this.clock = clock;
     }
 
-    private void kiemTraQuyenDiemDanh(Long maTK, Long maLop, Long maLMH, LocalDate ngay) {
-        List<String> vaiTro = authDao.vaiTro(maTK);
-        boolean laQuanTri = vaiTro.contains("ADMIN") || vaiTro.contains("BGH") || vaiTro.contains("GIAO_VU");
-        if (laQuanTri) {
-            return;
-        }
-
-        if (vaiTro.contains("GIAO_VIEN")) {
-            Long maGV = attendanceDao.timMaGiaoVienTheoMaTK(maTK)
-                    .orElseThrow(() -> new AccessException(403, "Tài khoản giáo viên không liên kết với thông tin giáo viên"));
-
-            // Kiểm tra chủ nhiệm
-            boolean laChuNhiem = attendanceDao.laChuNhiemLop(maGV, maLop, ngay);
-            if (laChuNhiem) {
-                return;
-            }
-
-            // Kiểm tra giáo viên bộ môn
-            boolean laBoMon = attendanceDao.laGiaoVienBoMon(maGV, maLop, maLMH, ngay);
-            if (laBoMon) {
-                return;
-            }
-
-            throw new AccessException(403, "Giáo viên không được phân công chủ nhiệm hoặc giảng dạy lớp này tại ngày điểm danh");
-        }
-
-        throw new AccessException(403, "Không có quyền thực hiện điểm danh");
-    }
-
     @Override
     @Transactional(readOnly = true)
     public List<AttendancePermissionClassResponse> layDanhSachLopDuocDiemDanh(LocalDate ngay) {
@@ -372,5 +343,34 @@ public class AttendanceServiceImpl implements AttendanceService {
         attendanceDao.ghiNhatKy(maTK, "CAP_NHAT_DIEM_DANH", "PHIEN_DIEM_DANH", maPDD.toString(), duLieuTruoc, duLieuSau, thoiDiem);
 
         return layThongTinDiemDanh(phien.getMaLop(), phien.getNgay(), phien.getPhamVi(), phien.getMaKhung(), phien.getMaLMH());
+    }
+
+    private void kiemTraQuyenDiemDanh(Long maTK, Long maLop, Long maLMH, LocalDate ngay) {
+        List<String> vaiTro = authDao.vaiTro(maTK);
+        boolean laQuanTri = vaiTro.contains("ADMIN") || vaiTro.contains("BGH") || vaiTro.contains("GIAO_VU");
+        if (laQuanTri) {
+            return;
+        }
+
+        if (vaiTro.contains("GIAO_VIEN")) {
+            Long maGV = attendanceDao.timMaGiaoVienTheoMaTK(maTK)
+                    .orElseThrow(() -> new AccessException(403, "Tài khoản giáo viên không liên kết với thông tin giáo viên"));
+
+            // Kiểm tra chủ nhiệm
+            boolean laChuNhiem = attendanceDao.laChuNhiemLop(maGV, maLop, ngay);
+            if (laChuNhiem) {
+                return;
+            }
+
+            // Kiểm tra giáo viên bộ môn
+            boolean laBoMon = attendanceDao.laGiaoVienBoMon(maGV, maLop, maLMH, ngay);
+            if (laBoMon) {
+                return;
+            }
+
+            throw new AccessException(403, "Giáo viên không được phân công chủ nhiệm hoặc giảng dạy lớp này tại ngày điểm danh");
+        }
+
+        throw new AccessException(403, "Không có quyền thực hiện điểm danh");
     }
 }

@@ -1,5 +1,6 @@
 package com.example.highschool_management.controller;
 
+import com.example.highschool_management.dto.request.ConfirmGrade10ClassesRequest;
 import com.example.highschool_management.dto.request.CreateSchoolClassRequest;
 import com.example.highschool_management.dto.request.UpdateSchoolClassRequest;
 import com.example.highschool_management.dto.response.*;
@@ -8,6 +9,7 @@ import com.example.highschool_management.service.SchoolClassService;
 import jakarta.validation.Valid;
 import java.net.URI;
 import java.time.LocalDate;
+import java.util.List;
 
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.ResponseEntity;
@@ -24,17 +26,9 @@ public class SchoolClassController {
     this.enrollmentService = enrollmentService;
   }
 
-  @GetMapping("/{maLop}")
-  public SchoolClassResponse getSchoolClass(@PathVariable("maLop") Long maLop) {
-    return schoolClassService.getSchoolClassById(maLop);
-  }
-
-  @PostMapping
-  public ResponseEntity<SchoolClassResponse> them(
-      @Valid @RequestBody CreateSchoolClassRequest request) {
-    var ketQua = schoolClassService.them(request);
-    URI diaChi = URI.create("/api/v1/classes/" + ketQua.maLop());
-    return ResponseEntity.created(diaChi).body(ketQua); // check
+  @GetMapping("/catalog")
+  public ClassCatalogResponse danhMuc() {
+    return schoolClassService.danhMuc();
   }
 
   @GetMapping
@@ -48,23 +42,11 @@ public class SchoolClassController {
     return schoolClassService.timDanhSach(tuKhoa, maNamHoc, maKhoi, trangThai, trang, kichThuoc);
   }
 
-  @PutMapping("/{maLop}")
-  public SchoolClassResponse capNhat(
-      @PathVariable("maLop") Long maLop, @Valid @RequestBody UpdateSchoolClassRequest request) {
-    return schoolClassService.capNhat(maLop, request);
+  @GetMapping("/{maLop}")
+  public SchoolClassResponse getSchoolClass(@PathVariable("maLop") Long maLop) {
+    return schoolClassService.getSchoolClassById(maLop);
   }
 
-  @DeleteMapping("/{maLop}")
-  public ResponseEntity<Void> xoa(@PathVariable("maLop") Long maLop) {
-    schoolClassService.xoaTheoMa(maLop);
-
-    return ResponseEntity.noContent().build();
-  }
-
-  @GetMapping("/catalog")
-  public ClassCatalogResponse danhMuc() {
-    return schoolClassService.danhMuc();
-  }
   @GetMapping("/{id}/students")
   public ResponseEntity<PageResponse<ClassStudentResponse>> danhSachHocSinh(
           @PathVariable("id") Long maLop,
@@ -88,6 +70,41 @@ public class SchoolClassController {
             );
 
     return ResponseEntity.ok(response);
+  }
+
+  @PostMapping
+  public ResponseEntity<SchoolClassResponse> them(
+      @Valid @RequestBody CreateSchoolClassRequest request) {
+    var ketQua = schoolClassService.them(request);
+    URI diaChi = URI.create("/api/v1/classes/" + ketQua.maLop());
+    return ResponseEntity.created(diaChi).body(ketQua); // check
+  }
+
+  @PutMapping("/{maLop}")
+  public SchoolClassResponse capNhat(
+      @PathVariable("maLop") Long maLop, @Valid @RequestBody UpdateSchoolClassRequest request) {
+    return schoolClassService.capNhat(maLop, request);
+  }
+  @DeleteMapping("/{maLop}")
+  public ResponseEntity<Void> xoa(@PathVariable("maLop") Long maLop) {
+    schoolClassService.xoaTheoMa(maLop);
+
+    return ResponseEntity.noContent().build();
+  }
+
+  @GetMapping("/grade-10/opening-proposal")
+  public List<Grade10ClassProposalResponse> deXuatMoLop10(
+          @RequestParam("maNamHoc") Long maNamHoc,
+          @RequestParam("chiTieuLopMoi") int chiTieuLopMoi) {
+
+    return schoolClassService.deXuatMoLop10(maNamHoc, chiTieuLopMoi);
+  }
+
+  @PostMapping("/grade-10/opening-confirmation")
+  public List<Long> xacNhanMoLop10(
+          @Valid @RequestBody ConfirmGrade10ClassesRequest yeuCau) {
+
+    return schoolClassService.xacNhanMoLop10(yeuCau);
   }
 
 }

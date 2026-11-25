@@ -13,6 +13,6 @@ import java.util.List;
 public interface TeachingAssignmentService {
     List<ClassSubjectOptionResponse> danhSachLuaChon();
     TeachingAssignmentResponse tao(@NotNull @Valid CreateTeachingAssignmentRequest phanCong);
-    TeachingAssignmentResponse chiTiet(Long maPhanCong);
     List<TeachingAssignmentResponse> lichSuTheoLopMonHoc(Long maLopMonHoc);
+    TeachingAssignmentResponse chiTiet(Long maPhanCong);
 }

@@ -62,6 +62,11 @@ public interface AttendanceDao {
     List<AttendanceStudentResponse> layChiTietDiemDanhTheoPhien(Long maPDD);
 
     /**
+     * Lấy các bản ghi điểm danh hiện tại theo maPDD (để lưu log DuLieuTruoc)
+     */
+    List<AttendanceRecord> layDiemDanhHienTaiTheoPhien(Long maPDD);
+
+    /**
      * Tạo mới phiên điểm danh trong phien_diem_danh
      */
     Long taoPhienDiemDanh(AttendanceSession phien);
@@ -75,11 +80,6 @@ public interface AttendanceDao {
      * Cập nhật chi tiết điểm danh từng học sinh
      */
     void capNhatChiTietDiemDanh(Long maPDD, List<AttendanceRecord> chiTietList);
-
-    /**
-     * Lấy các bản ghi điểm danh hiện tại theo maPDD (để lưu log DuLieuTruoc)
-     */
-    List<AttendanceRecord> layDiemDanhHienTaiTheoPhien(Long maPDD);
 
     /**
      * Ghi nhật ký hệ thống

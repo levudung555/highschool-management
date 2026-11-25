@@ -22,6 +22,16 @@ public class GuardianController {
 
     GuardianService guardianService;
 
+    @GetMapping
+    public List<GuardianResponse> getAllGuardians() {
+        return guardianService.getAllGuardians();
+    }
+
+    @GetMapping("/{maNGH}")
+    public GuardianResponse getGuardianById(@PathVariable Long maNGH) {
+        return guardianService.getGuardianById(maNGH);
+    }
+
     @PostMapping
     public GuardianResponse createGuardian(@RequestBody @Valid CreateGuardianRequest request) {
         return guardianService.createGuardian(request);
@@ -37,14 +47,14 @@ public class GuardianController {
         return guardianService.deleteGuardian(maNGH);
     }
 
-    @GetMapping("/{maNGH}")
-    public GuardianResponse getGuardianById(@PathVariable Long maNGH) {
-        return guardianService.getGuardianById(maNGH);
+    @GetMapping("/student/{maHS}")
+    public List<GuardianResponse> getGuardiansByStudent(@PathVariable Long maHS) {
+        return guardianService.getGuardiansByStudent(maHS);
     }
 
-    @GetMapping
-    public List<GuardianResponse> getAllGuardians() {
-        return guardianService.getAllGuardians();
+    @GetMapping("/{maNGH}/students")
+    public List<StudentOfGuardianResponse> getStudentsByGuardian(@PathVariable Long maNGH) {
+        return guardianService.getStudentsByGuardian(maNGH);
     }
 
     @PostMapping("/link")
@@ -55,15 +65,5 @@ public class GuardianController {
     @DeleteMapping("/unlink")
     public boolean unlinkGuardian(@RequestParam Long maHS, @RequestParam Long maNGH) {
         return guardianService.unlinkGuardian(maHS, maNGH);
-    }
-
-    @GetMapping("/student/{maHS}")
-    public List<GuardianResponse> getGuardiansByStudent(@PathVariable Long maHS) {
-        return guardianService.getGuardiansByStudent(maHS);
-    }
-
-    @GetMapping("/{maNGH}/students")
-    public List<StudentOfGuardianResponse> getStudentsByGuardian(@PathVariable Long maNGH) {
-        return guardianService.getStudentsByGuardian(maNGH);
     }
 }

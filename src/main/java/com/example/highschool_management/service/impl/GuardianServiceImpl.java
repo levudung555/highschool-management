@@ -32,6 +32,25 @@ public class GuardianServiceImpl implements GuardianService {
   GuardianMapper guardianMapper;
 
   @Override
+  public List<GuardianResponse> getAllGuardians() {
+    nguoiDung.yeuCauVaiTro("ADMIN", "BGH", "GIAO_VU");
+    return guardianDao.findAll().stream().map(guardianMapper::toResponse).toList();
+  }
+
+  @Override
+  public GuardianResponse getGuardianById(Long maNGH) {
+    nguoiDung.yeuCauVaiTro("ADMIN", "BGH", "GIAO_VU");
+    Guardian guardian =
+        guardianDao
+            .findByMaNGH(maNGH)
+            .orElseThrow(
+                () ->
+                    new com.example.highschool_management.exception.BusinessException(
+                        "Người giám hộ không tồn tại"));
+    return guardianMapper.toResponse(guardian);
+  }
+
+  @Override
   public GuardianResponse createGuardian(CreateGuardianRequest request) {
     nguoiDung.yeuCauVaiTro("ADMIN", "BGH", "GIAO_VU");
     if (guardianDao.existsSoDienThoai(request.getSdt())) {
@@ -104,22 +123,27 @@ public class GuardianServiceImpl implements GuardianService {
   }
 
   @Override
-  public GuardianResponse getGuardianById(Long maNGH) {
+  public List<GuardianResponse> getGuardiansByStudent(Long maHS) {
     nguoiDung.yeuCauVaiTro("ADMIN", "BGH", "GIAO_VU");
-    Guardian guardian =
-        guardianDao
-            .findByMaNGH(maNGH)
-            .orElseThrow(
-                () ->
-                    new com.example.highschool_management.exception.BusinessException(
-                        "Người giám hộ không tồn tại"));
-    return guardianMapper.toResponse(guardian);
+    studentDao
+        .findByMaHS(maHS)
+        .orElseThrow(
+            () ->
+                new com.example.highschool_management.exception.BusinessException(
+                    "Học sinh không tồn tại"));
+    return studentGuardianDao.findGuardiansByMaHS(maHS);
   }
 
   @Override
-  public List<GuardianResponse> getAllGuardians() {
+  public List<com.example.highschool_management.dto.response.StudentOfGuardianResponse> getStudentsByGuardian(Long maNGH) {
     nguoiDung.yeuCauVaiTro("ADMIN", "BGH", "GIAO_VU");
-    return guardianDao.findAll().stream().map(guardianMapper::toResponse).toList();
+    guardianDao
+        .findByMaNGH(maNGH)
+        .orElseThrow(
+            () ->
+                new com.example.highschool_management.exception.BusinessException(
+                    "Người giám hộ không tồn tại"));
+    return studentGuardianDao.findStudentsByMaNGH(maNGH);
   }
 
   @Override
@@ -155,29 +179,5 @@ public class GuardianServiceImpl implements GuardianService {
   public boolean unlinkGuardian(Long maHS, Long maNGH) {
     nguoiDung.yeuCauVaiTro("ADMIN", "BGH", "GIAO_VU");
     return studentGuardianDao.unlink(maHS, maNGH);
-  }
-
-  @Override
-  public List<GuardianResponse> getGuardiansByStudent(Long maHS) {
-    nguoiDung.yeuCauVaiTro("ADMIN", "BGH", "GIAO_VU");
-    studentDao
-        .findByMaHS(maHS)
-        .orElseThrow(
-            () ->
-                new com.example.highschool_management.exception.BusinessException(
-                    "Học sinh không tồn tại"));
-    return studentGuardianDao.findGuardiansByMaHS(maHS);
-  }
-
-  @Override
-  public List<com.example.highschool_management.dto.response.StudentOfGuardianResponse> getStudentsByGuardian(Long maNGH) {
-    nguoiDung.yeuCauVaiTro("ADMIN", "BGH", "GIAO_VU");
-    guardianDao
-        .findByMaNGH(maNGH)
-        .orElseThrow(
-            () ->
-                new com.example.highschool_management.exception.BusinessException(
-                    "Người giám hộ không tồn tại"));
-    return studentGuardianDao.findStudentsByMaNGH(maNGH);
   }
 }

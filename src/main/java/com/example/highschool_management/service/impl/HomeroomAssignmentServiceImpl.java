@@ -50,35 +50,7 @@ public class HomeroomAssignmentServiceImpl implements HomeroomAssignmentService 
         this.clock = clock;
     }
 
-    private void kiemTraLopVaNgay(SchoolClass lop, LocalDate tuNgay){
-        if(!"HOAT_DONG".equals(lop.getTrangThai())){
-            throw new BusinessException("Lớp học không hoạt động");
-        }
-        if(tuNgay == null){
-            throw new InvalidRequestException("Ngày bắt đầu không được để trống");
-        }
-        LocalDate now = LocalDate.now(clock);
-        if(tuNgay.isBefore(now)){
-            throw new InvalidRequestException("Ngày bắt đầu không được ở quá khứ");
-        }
-
-        SchoolYearPeriodResponse namHoc = enrollmentDao.namHoc(lop.getMaNamHoc());
-        boolean isTruocNamHoc = tuNgay.isBefore(namHoc.getBatDau());
-        boolean isSauNamHoc = tuNgay.isAfter(namHoc.getKetThuc());
-        if(isTruocNamHoc || isSauNamHoc){
-            throw new InvalidRequestException("Ngày bắt đầu không nằm trong năm học");
-        }
-    }
-    private SchoolClass khoaLop(Long maLop){
-        Optional<SchoolClass> lop = schoolClassDao.timTheoMaDeCapNhat(maLop);
-        if (lop.isEmpty()) {
-            throw new ResourceNotFoundException("Không tìm thấy lớp học có mã: " + maLop);
-        }
-        SchoolClass lopHoc = lop.get();
-        return lopHoc;
-    }
-
-
+    // Phân công giáo viên chủ nhiệm cho một lớp và lưu tài khoản duyệt trực tiếp.
     @Override
     @Transactional(isolation = Isolation.READ_COMMITTED)
     public HomeroomAssignmentResponse taoPhanCongCN(CreateHomeroomAssignmentRequest request){
@@ -128,18 +100,39 @@ public class HomeroomAssignmentServiceImpl implements HomeroomAssignmentService 
 
         return homeroomAssignmentMapper.sangResponse(phanCongMoi.get());
     }
-
-    @Override
-    @Transactional(readOnly = true)
-    public HomeroomAssignmentResponse chiTiet(Long maPhanCong){
-        nguoiDung.yeuCauVaiTro("ADMIN", "BGH", "GIAO_VU");
-        Optional<HomeroomAssignment> phanCong = homeroomAssignmentDao.timTheoMa(maPhanCong);
-        if (phanCong.isEmpty()) {
-            throw new ResourceNotFoundException("Không tìm thấy phân công chủ nhiệm có mã: " + maPhanCong);
+    // Khóa dòng của lớp để hai lần phân công đồng thời không cùng vượt qua bước kiểm tra trùng.
+    private SchoolClass khoaLop(Long maLop){
+        Optional<SchoolClass> lop = schoolClassDao.timTheoMaDeCapNhat(maLop);
+        if (lop.isEmpty()) {
+            throw new ResourceNotFoundException("Không tìm thấy lớp học có mã: " + maLop);
         }
-        return homeroomAssignmentMapper.sangResponse(phanCong.get());
+        SchoolClass lopHoc = lop.get();
+        return lopHoc;
     }
 
+
+    // Lớp phải đang hoạt động và ngày bắt đầu chủ nhiệm phải từ hôm nay trở đi, trong năm học của lớp.
+    private void kiemTraLopVaNgay(SchoolClass lop, LocalDate tuNgay){
+        if(!"HOAT_DONG".equals(lop.getTrangThai())){
+            throw new BusinessException("Lớp học không hoạt động");
+        }
+        if(tuNgay == null){
+            throw new InvalidRequestException("Ngày bắt đầu không được để trống");
+        }
+        LocalDate now = LocalDate.now(clock);
+        if(tuNgay.isBefore(now)){
+            throw new InvalidRequestException("Ngày bắt đầu không được ở quá khứ");
+        }
+
+        SchoolYearPeriodResponse namHoc = enrollmentDao.namHoc(lop.getMaNamHoc());
+        boolean isTruocNamHoc = tuNgay.isBefore(namHoc.getBatDau());
+        boolean isSauNamHoc = tuNgay.isAfter(namHoc.getKetThuc());
+        if(isTruocNamHoc || isSauNamHoc){
+            throw new InvalidRequestException("Ngày bắt đầu không nằm trong năm học");
+        }
+    }
+
+    // Tra các lần phân công theo lớp để biết từng giai đoạn do giáo viên nào chủ nhiệm.
     @Override
     @Transactional(readOnly = true)
     public List<HomeroomAssignmentResponse> lichSu(Long maLop){
@@ -158,5 +151,17 @@ public class HomeroomAssignmentServiceImpl implements HomeroomAssignmentService 
             danhSachResponse.add(response);
         }
         return danhSachResponse;
+    }
+
+    // Lấy thông tin của một lần phân công chủ nhiệm theo mã phân công.
+    @Override
+    @Transactional(readOnly = true)
+    public HomeroomAssignmentResponse chiTiet(Long maPhanCong){
+        nguoiDung.yeuCauVaiTro("ADMIN", "BGH", "GIAO_VU");
+        Optional<HomeroomAssignment> phanCong = homeroomAssignmentDao.timTheoMa(maPhanCong);
+        if (phanCong.isEmpty()) {
+            throw new ResourceNotFoundException("Không tìm thấy phân công chủ nhiệm có mã: " + maPhanCong);
+        }
+        return homeroomAssignmentMapper.sangResponse(phanCong.get());
     }
 }

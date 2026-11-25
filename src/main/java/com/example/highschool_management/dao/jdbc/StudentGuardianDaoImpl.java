@@ -20,56 +20,6 @@ import java.util.List;
 public class StudentGuardianDaoImpl implements StudentGuardianDao {
 
     @Override
-    public boolean link(StudentGuardian studentGuardian) {
-        String sql = """
-            INSERT INTO hs_nguoi_giam_ho (MaHS, MaNGH, MoiQuanHe, LienHeChinh)
-            VALUES (?, ?, ?, ?)
-            ON DUPLICATE KEY UPDATE MoiQuanHe = VALUES(MoiQuanHe), LienHeChinh = VALUES(LienHeChinh)
-            """;
-        try (Connection conn = JdbcConnect.getConnection();
-             PreparedStatement ps = conn.prepareStatement(sql)) {
-            ps.setLong(1, studentGuardian.getMaHS());
-            ps.setLong(2, studentGuardian.getMaNGH());
-            ps.setString(3, studentGuardian.getMoiQuanHe());
-            ps.setInt(4, Boolean.TRUE.equals(studentGuardian.getLienHeChinh()) ? 1 : 0);
-            return ps.executeUpdate() > 0;
-        } catch (Exception e) {
-            throw new RuntimeException("Lỗi khi liên kết học sinh và người giám hộ", e);
-        }
-    }
-
-    @Override
-    public boolean unlink(Long maHS, Long maNGH) {
-        String sql = "DELETE FROM hs_nguoi_giam_ho WHERE MaHS = ? AND MaNGH = ?";
-        try (Connection conn = JdbcConnect.getConnection();
-             PreparedStatement ps = conn.prepareStatement(sql)) {
-            ps.setLong(1, maHS);
-            ps.setLong(2, maNGH);
-            return ps.executeUpdate() > 0;
-        } catch (Exception e) {
-            throw new RuntimeException("Lỗi khi hủy liên kết người giám hộ và học sinh", e);
-        }
-    }
-
-    @Override
-    public boolean existsByMaHSAndMaNGH(Long maHS, Long maNGH) {
-        String sql = "SELECT EXISTS(SELECT 1 FROM hs_nguoi_giam_ho WHERE MaHS = ? AND MaNGH = ?)";
-        try (Connection conn = JdbcConnect.getConnection();
-             PreparedStatement ps = conn.prepareStatement(sql)) {
-            ps.setLong(1, maHS);
-            ps.setLong(2, maNGH);
-            try (ResultSet rs = ps.executeQuery()) {
-                if (rs.next()) {
-                    return rs.getBoolean(1);
-                }
-            }
-        } catch (Exception e) {
-            throw new RuntimeException("Lỗi khi kiểm tra liên kết người giám hộ", e);
-        }
-        return false;
-    }
-
-    @Override
     public List<GuardianResponse> findGuardiansByMaHS(Long maHS) {
         String sql = """
             SELECT g.MaNGH, g.HoTen, g.SoDienThoai, g.Email, g.DiaChi,
@@ -140,6 +90,24 @@ public class StudentGuardianDaoImpl implements StudentGuardianDao {
     }
 
     @Override
+    public boolean existsByMaHSAndMaNGH(Long maHS, Long maNGH) {
+        String sql = "SELECT EXISTS(SELECT 1 FROM hs_nguoi_giam_ho WHERE MaHS = ? AND MaNGH = ?)";
+        try (Connection conn = JdbcConnect.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setLong(1, maHS);
+            ps.setLong(2, maNGH);
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) {
+                    return rs.getBoolean(1);
+                }
+            }
+        } catch (Exception e) {
+            throw new RuntimeException("Lỗi khi kiểm tra liên kết người giám hộ", e);
+        }
+        return false;
+    }
+
+    @Override
     public boolean existsAnyStudentLinked(Long maNGH) {
         String sql = "SELECT EXISTS(SELECT 1 FROM hs_nguoi_giam_ho WHERE MaNGH = ?)";
         try (Connection conn = JdbcConnect.getConnection();
@@ -165,6 +133,38 @@ public class StudentGuardianDaoImpl implements StudentGuardianDao {
             ps.executeUpdate();
         } catch (Exception e) {
             throw new RuntimeException("Lỗi khi cập nhật người liên hệ chính", e);
+        }
+    }
+
+    @Override
+    public boolean link(StudentGuardian studentGuardian) {
+        String sql = """
+            INSERT INTO hs_nguoi_giam_ho (MaHS, MaNGH, MoiQuanHe, LienHeChinh)
+            VALUES (?, ?, ?, ?)
+            ON DUPLICATE KEY UPDATE MoiQuanHe = VALUES(MoiQuanHe), LienHeChinh = VALUES(LienHeChinh)
+            """;
+        try (Connection conn = JdbcConnect.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setLong(1, studentGuardian.getMaHS());
+            ps.setLong(2, studentGuardian.getMaNGH());
+            ps.setString(3, studentGuardian.getMoiQuanHe());
+            ps.setInt(4, Boolean.TRUE.equals(studentGuardian.getLienHeChinh()) ? 1 : 0);
+            return ps.executeUpdate() > 0;
+        } catch (Exception e) {
+            throw new RuntimeException("Lỗi khi liên kết học sinh và người giám hộ", e);
+        }
+    }
+
+    @Override
+    public boolean unlink(Long maHS, Long maNGH) {
+        String sql = "DELETE FROM hs_nguoi_giam_ho WHERE MaHS = ? AND MaNGH = ?";
+        try (Connection conn = JdbcConnect.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setLong(1, maHS);
+            ps.setLong(2, maNGH);
+            return ps.executeUpdate() > 0;
+        } catch (Exception e) {
+            throw new RuntimeException("Lỗi khi hủy liên kết người giám hộ và học sinh", e);
         }
     }
 

@@ -807,6 +807,16 @@ document.addEventListener("click", async (event) => {
 $("addClassBtn").addEventListener("click", () => openClass());
 $("newEnrollBtn").addEventListener("click", () => openEnrollment("enroll"));
 $("newTransferBtn").addEventListener("click", () => openEnrollment("transfer"));
+// Cập nhật bộ chọn lớp và danh sách phân lớp sau khi lưu từ khung xếp lớp 10.
+document.addEventListener("grade10-classes-changed", async () => {
+  try {
+    await loadAllClasses();
+    configureRecords(state.user, state.catalog, state.classes);
+    if (state.view === "requests") await loadRequests(0);
+  } catch (error) {
+    globalError(error);
+  }
+});
 $("rosterEnrollBtn").addEventListener("click", () => openEnrollment("enroll"));
 $("classFilters").addEventListener("submit", (e) => {
   e.preventDefault();
@@ -894,6 +904,7 @@ async function init() {
       "addClassBtn",
       "newEnrollBtn",
       "newTransferBtn",
+      "toggleGrade10",
       "rosterEnrollBtn",
     ].forEach((id) => ($(id).disabled = !canManage));
     const c = await api("/classes/catalog");

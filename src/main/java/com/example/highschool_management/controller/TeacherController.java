@@ -20,6 +20,16 @@ public class TeacherController {
 
     TeacherService teacherService;
 
+    @GetMapping
+    public List<TeacherResponse> getAllTeachers() {
+        return teacherService.getAllTeachers();
+    }
+
+    @GetMapping("/{maGV}")
+    public TeacherResponse getTeacherById(@PathVariable Long maGV) {
+        return teacherService.getTeacherById(maGV);
+    }
+
     @PostMapping
     public TeacherResponse createTeacher(@RequestBody @Valid CreateTeacherRequest request) {
         return teacherService.createTeacher(request);
@@ -33,15 +43,5 @@ public class TeacherController {
     @DeleteMapping
     public boolean deleteTeacher(@RequestParam List<Long> maGV) {
         return teacherService.deleteTeacher(maGV);
-    }
-
-    @GetMapping("/{maGV}")
-    public TeacherResponse getTeacherById(@PathVariable Long maGV) {
-        return teacherService.getTeacherById(maGV);
-    }
-
-    @GetMapping
-    public List<TeacherResponse> getAllTeachers() {
-        return teacherService.getAllTeachers();
     }
 }

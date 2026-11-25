@@ -35,6 +35,10 @@ public class StudentController {
     return studentService.updateStudent(maHS, request);
   }
 
+  @GetMapping
+  public List<StudentResponse> getAllStudents() {
+    return studentService.getAllStudents();
+  }
   @GetMapping("/search")
   public List<StudentResponse> searchStudents(
       @RequestParam(required = false) String maSoHS,
@@ -44,6 +48,12 @@ public class StudentController {
       @RequestParam(required = false) Long maNamHoc) {
     return studentService.searchStudents(maSoHS, hoTen, maLop, maKhoi, maNamHoc);
   }
+
+  @DeleteMapping
+  public boolean deleteStudent(@RequestParam List<Long> maHS) {
+    return studentService.deleteStudent(maHS);
+  }
+
   @GetMapping("/{id}/enrollments")
   public ResponseEntity<List<EnrollmentResponse>> lichSuPhanLop(
           @PathVariable("id") Long maHocSinh
@@ -52,15 +62,5 @@ public class StudentController {
             enrollmentService.lichSu(maHocSinh);
 
     return ResponseEntity.ok(response);
-  }
-
-  @GetMapping
-  public List<StudentResponse> getAllStudents() {
-    return studentService.getAllStudents();
-  }
-
-  @DeleteMapping
-  public boolean deleteStudent(@RequestParam List<Long> maHS) {
-    return studentService.deleteStudent(maHS);
   }
 }

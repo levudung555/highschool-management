@@ -7,6 +7,8 @@ import jakarta.validation.Valid;
 import java.net.URI;
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Map;
+
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -19,6 +21,29 @@ public class EnrollmentController {
   public EnrollmentController(EnrollmentService enrollmentService) {
     this.enrollmentService = enrollmentService;
   }
+  @GetMapping("/batches/status")
+  public Grade10PlacementStatusResponse trangThaiXepLop10(
+          @RequestParam("maNamHoc") Long maNamHoc) {
+    return enrollmentService.trangThaiXepLop10(maNamHoc);
+  }
+  @GetMapping("/batches/preview")
+  public Grade10PlacementPreviewResponse xemTruocXepLop10(
+          @RequestParam("maNamHoc") Long maNamHoc) {
+
+    return enrollmentService.xemTruocXepLop10(maNamHoc);
+  }
+  @PostMapping("/batches/confirm")
+  public Map<String, Object> chotXepLop10(
+          @Valid @RequestBody ConfirmGrade10PlacementRequest yeuCau) {
+
+    int soHocSinhDaXep = enrollmentService.chotXepLop10(yeuCau);
+
+    return Map.of(
+            "maNamHoc", yeuCau.maNamHoc(),
+            "ngayVaoLop", yeuCau.ngayVaoLop(),
+            "soHocSinhDaXep", soHocSinhDaXep
+    );
+  }
   @PostMapping
   public ResponseEntity<EnrollmentResponse> xepLop(@RequestBody EnrollStudentRequest resquest) {
     EnrollmentResponse response = enrollmentService.xepLop(resquest);
@@ -28,6 +53,7 @@ public class EnrollmentController {
     //tra http 201 Created va du lieu vua tao
     return ResponseEntity.created(location).body(response);
   }
+
   @PostMapping("/transfers")
   public ResponseEntity<EnrollmentResponse> chuyenLop(
           @RequestBody TransferStudentRequest request

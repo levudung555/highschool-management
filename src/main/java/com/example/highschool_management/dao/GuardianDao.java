@@ -6,12 +6,12 @@ import java.util.List;
 import java.util.Optional;
 
 public interface GuardianDao {
-    Guardian insertGuardian(Guardian guardian);
-    boolean updateGuardian(Guardian guardian);
+    List<Guardian> findAll();
+    Optional<Guardian> findByMaNGH(Long maNGH);
     boolean existsSoDienThoai(String soDienThoai);
     boolean existsEmail(String email);
-    Optional<Guardian> findByMaNGH(Long maNGH);
-    boolean deleteGuardians(List<Long> maNGH);
+    Guardian insertGuardian(Guardian guardian);
+    boolean updateGuardian(Guardian guardian);
     List<Long> findExistingIds(List<Long> maNGH);
-    List<Guardian> findAll();
+    boolean deleteGuardians(List<Long> maNGH);
 }

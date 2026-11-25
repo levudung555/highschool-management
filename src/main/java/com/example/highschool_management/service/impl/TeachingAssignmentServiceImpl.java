@@ -53,6 +53,15 @@ public class TeachingAssignmentServiceImpl implements TeachingAssignmentService 
     }
 
 
+    // Lấy các môn đã được thiết lập cho từng lớp và học kỳ để giáo vụ chọn khi phân công.
+    @Override
+    @Transactional(readOnly = true)
+    public List<ClassSubjectOptionResponse> danhSachLuaChon() {
+        nguoiDung.yeuCauVaiTro("ADMIN", "BGH", "GIAO_VU");
+        return classSubjectDao.danhSachLuaChon();
+    }
+
+    // Phân công giáo viên dạy một môn của lớp trong học kỳ và ghi nhật ký trong cùng giao dịch.
     @Override
     @Transactional(isolation = Isolation.READ_COMMITTED)
     public TeachingAssignmentResponse tao(CreateTeachingAssignmentRequest phanCong){
@@ -143,24 +152,7 @@ public class TeachingAssignmentServiceImpl implements TeachingAssignmentService 
         return teachingAssignmentMapper.sangResponse(phanCongMoi.get());
     }
 
-    @Override
-    @Transactional(readOnly = true)
-    public List<ClassSubjectOptionResponse> danhSachLuaChon() {
-        nguoiDung.yeuCauVaiTro("ADMIN", "BGH", "GIAO_VU");
-        return classSubjectDao.danhSachLuaChon();
-    }
-
-    @Override
-    @Transactional(readOnly = true)
-    public TeachingAssignmentResponse chiTiet(Long maPhanCong){
-        nguoiDung.yeuCauVaiTro("ADMIN", "BGH", "GIAO_VU");
-        Optional<TeachingAssignment> phanCong = teachingAssignmentDao.timTheoMa(maPhanCong);
-        if(phanCong.isEmpty()){
-            throw new ResourceNotFoundException("Không tìm thấy phân công giảng dạy có mã: " + maPhanCong);
-        }
-        return teachingAssignmentMapper.sangResponse(phanCong.get());
-    }
-
+    // Tra các giáo viên từng dạy môn đã chọn của lớp trong cùng học kỳ.
     @Override
     @Transactional(readOnly = true)
     public List<TeachingAssignmentResponse> lichSuTheoLopMonHoc(Long maLopMonHoc){
@@ -175,6 +167,18 @@ public class TeachingAssignmentServiceImpl implements TeachingAssignmentService 
         return teachingAssignmentDao.lichSuTheoLopMonHoc(maLopMonHoc).stream()
                 .map(teachingAssignmentMapper::sangResponse)
                 .toList();
+    }
+
+    // Tra một lần phân công giảng dạy cụ thể, gồm giáo viên và thời gian phụ trách.
+    @Override
+    @Transactional(readOnly = true)
+    public TeachingAssignmentResponse chiTiet(Long maPhanCong){
+        nguoiDung.yeuCauVaiTro("ADMIN", "BGH", "GIAO_VU");
+        Optional<TeachingAssignment> phanCong = teachingAssignmentDao.timTheoMa(maPhanCong);
+        if(phanCong.isEmpty()){
+            throw new ResourceNotFoundException("Không tìm thấy phân công giảng dạy có mã: " + maPhanCong);
+        }
+        return teachingAssignmentMapper.sangResponse(phanCong.get());
     }
 
 }

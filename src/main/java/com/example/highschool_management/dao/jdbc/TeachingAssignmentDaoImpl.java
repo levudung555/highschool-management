@@ -91,6 +91,32 @@ public class TeachingAssignmentDaoImpl implements TeachingAssignmentDao {
                 return phanCong;
             };
 
+    // Kiểm tra các phân công đã duyệt cho cùng lớp, môn và học kỳ. Phân công để trống ngày kết thúc được tính đến cuối học kỳ.
+    @Override
+    public boolean coPhanCongTrungThoiGian(Long maLopMonHoc, LocalDate tuNgay, LocalDate denNgayHieuLuc){
+        String sql = """
+            SELECT COUNT(*)
+            FROM phan_cong_giang_day p
+            JOIN lop_mon_hoc lmh ON lmh.MaLMH = p.MaLMH
+            JOIN hoc_ky hk ON hk.MaHK = lmh.MaHK
+            WHERE p.MaLMH = ?
+              AND p.TrangThaiDuyet = 'DA_DUYET'
+              AND p.TuNgay <= ?
+              AND COALESCE(p.DenNgay, hk.NgayKetThuc) >= ?
+            """;
+
+        Long soPhanCongTrung = jdbcTemplate.queryForObject(
+                sql,
+                Long.class,
+                maLopMonHoc,
+                denNgayHieuLuc,
+                tuNgay
+        );
+
+        return soPhanCongTrung != null && soPhanCongTrung > 0;
+    }
+
+    // Lưu giáo viên phụ trách lớp môn học cùng ngày bắt đầu, ngày kết thúc và thông tin duyệt.
     @Override
     public long tao(TeachingAssignment phanCong){
         String sql = """
@@ -115,22 +141,7 @@ public class TeachingAssignmentDaoImpl implements TeachingAssignmentDao {
         return generatedId.longValue();
     }
 
-    @Override
-    public Optional<TeachingAssignment> timTheoMa(Long maPhanCong){
-        String sql = SELECT_PHAN_CONG + " WHERE MaPCGD = ?";
-        var ketQua = jdbcTemplate.query(sql, PHAN_CONG_MAPPER, maPhanCong);
-        if (ketQua.isEmpty()) {
-            return Optional.empty();
-        }
-        return Optional.of(ketQua.get(0));
-    }
-
-    @Override
-    public List<TeachingAssignment> lichSuTheoLopMonHoc(Long maLopMonHoc) {
-        String sql = SELECT_PHAN_CONG + " WHERE p.MaLMH = ? ORDER BY p.TuNgay DESC";
-        return jdbcTemplate.query(sql, PHAN_CONG_MAPPER, maLopMonHoc);
-    }
-
+    // Ghi lại tài khoản thực hiện và thông tin phân công giảng dạy tại thời điểm tạo.
     @Override
     public void ghiNhatKyTao(
             Long maTaiKhoan,
@@ -192,28 +203,22 @@ public class TeachingAssignmentDaoImpl implements TeachingAssignmentDao {
         }
     }
 
+    // Sắp các lần phân công của lớp môn học theo ngày bắt đầu, mới nhất trước.
     @Override
-    public boolean coPhanCongTrungThoiGian(Long maLopMonHoc, LocalDate tuNgay, LocalDate denNgayHieuLuc){
-        String sql = """
-            SELECT COUNT(*)
-            FROM phan_cong_giang_day p
-            JOIN lop_mon_hoc lmh ON lmh.MaLMH = p.MaLMH
-            JOIN hoc_ky hk ON hk.MaHK = lmh.MaHK
-            WHERE p.MaLMH = ?
-              AND p.TrangThaiDuyet = 'DA_DUYET'
-              AND p.TuNgay <= ?
-              AND COALESCE(p.DenNgay, hk.NgayKetThuc) >= ?
-            """;
+    public List<TeachingAssignment> lichSuTheoLopMonHoc(Long maLopMonHoc) {
+        String sql = SELECT_PHAN_CONG + " WHERE p.MaLMH = ? ORDER BY p.TuNgay DESC";
+        return jdbcTemplate.query(sql, PHAN_CONG_MAPPER, maLopMonHoc);
+    }
 
-        Long soPhanCongTrung = jdbcTemplate.queryForObject(
-                sql,
-                Long.class,
-                maLopMonHoc,
-                denNgayHieuLuc,
-                tuNgay
-        );
-
-        return soPhanCongTrung != null && soPhanCongTrung > 0;
+    // Lấy bản phân công giảng dạy theo mã để hiển thị thông tin chi tiết.
+    @Override
+    public Optional<TeachingAssignment> timTheoMa(Long maPhanCong){
+        String sql = SELECT_PHAN_CONG + " WHERE MaPCGD = ?";
+        var ketQua = jdbcTemplate.query(sql, PHAN_CONG_MAPPER, maPhanCong);
+        if (ketQua.isEmpty()) {
+            return Optional.empty();
+        }
+        return Optional.of(ketQua.get(0));
     }
 
 

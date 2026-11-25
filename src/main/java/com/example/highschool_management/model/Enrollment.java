@@ -14,6 +14,15 @@ public class Enrollment {
   private String lyDoKetThuc;
   private Long maTaiKhoanThucHien;
   private LocalDateTime thoiDiemThucHien;
+  private Long maHoSoNhapHoc;
+
+  public Long getMaHoSoNhapHoc() {
+    return maHoSoNhapHoc;
+  }
+
+  public void setMaHoSoNhapHoc(Long maHoSoNhapHoc) {
+    this.maHoSoNhapHoc = maHoSoNhapHoc;
+  }
 
   public Long getMaXepLop() {
     return maXepLop;

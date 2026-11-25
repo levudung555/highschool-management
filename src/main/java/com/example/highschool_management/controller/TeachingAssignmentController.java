@@ -20,22 +20,17 @@ public class TeachingAssignmentController {
         this.service = service;
     }
 
+    @GetMapping("/options")
+    public List<ClassSubjectOptionResponse> luaChon() {
+        return service.danhSachLuaChon();
+    }
+
     @PostMapping
     public ResponseEntity<TeachingAssignmentResponse> taoPhanCong(@Valid @RequestBody CreateTeachingAssignmentRequest request) {
         TeachingAssignmentResponse response = service.tao(request);
         return ResponseEntity.status(201).body(response);
     }
 
-    @GetMapping("/options")
-    public List<ClassSubjectOptionResponse> luaChon() {
-        return service.danhSachLuaChon();
-    }
-
-    @GetMapping("/{id}")
-    public ResponseEntity<TeachingAssignmentResponse> chiTiet(@PathVariable("id") Long id) {
-        TeachingAssignmentResponse response = service.chiTiet(id);
-        return ResponseEntity.ok(response);
-    }
     @GetMapping
     public ResponseEntity<List<TeachingAssignmentResponse>> lichSu(
             @RequestParam("maLopMonHoc") Long maLopMonHoc
@@ -43,6 +38,11 @@ public class TeachingAssignmentController {
         List<TeachingAssignmentResponse> response =
                 service.lichSuTheoLopMonHoc(maLopMonHoc);
 
+        return ResponseEntity.ok(response);
+    }
+    @GetMapping("/{id}")
+    public ResponseEntity<TeachingAssignmentResponse> chiTiet(@PathVariable("id") Long id) {
+        TeachingAssignmentResponse response = service.chiTiet(id);
         return ResponseEntity.ok(response);
     }
 }

@@ -17,54 +17,36 @@ import org.springframework.stereotype.Repository;
 public class TeacherDaoImpl implements TeacherDao {
 
   @Override
-  public Teacher insertTeacher(Teacher teacher) {
-    String sql =
-        """
-        INSERT INTO giao_vien (MaSoGV, HoTen, NgaySinh, SoDienThoai, Email, ChuyenMon, TrangThai)
-        VALUES (?, ?, ?, ?, ?, ?, ?)
-        """;
+  public List<Teacher> findAll() {
+    String sql = "SELECT * FROM giao_vien ORDER BY MaGV DESC";
+    List<Teacher> list = new ArrayList<>();
     try (Connection conn = JdbcConnect.getConnection();
-        PreparedStatement ps = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
-      ps.setString(1, teacher.getMaSoGV());
-      ps.setString(2, teacher.getHoTen());
-      ps.setDate(3, teacher.getNgaySinh());
-      ps.setString(4, teacher.getSdt());
-      ps.setString(5, teacher.getEmail());
-      ps.setString(6, teacher.getChuyenMon());
-      ps.setString(7, teacher.getTrangThai());
-      ps.executeUpdate();
-      try (ResultSet rs = ps.getGeneratedKeys()) {
-        if (rs.next()) {
-          teacher.setMaGV(rs.getLong(1));
-        }
+        PreparedStatement ps = conn.prepareStatement(sql);
+        ResultSet rs = ps.executeQuery()) {
+      while (rs.next()) {
+        list.add(mapResultSetToTeacher(rs));
       }
-      return teacher;
+      return list;
     } catch (Exception e) {
-      throw new RuntimeException("Lỗi khi thêm giáo viên", e);
+      throw new RuntimeException("Lỗi khi lấy danh sách giáo viên", e);
     }
   }
 
   @Override
-  public boolean updateTeacher(Teacher teacher) {
-    String sql =
-        """
-        UPDATE giao_vien
-        SET HoTen = ?, NgaySinh = ?, SoDienThoai = ?, Email = ?, ChuyenMon = ?, TrangThai = ?
-        WHERE MaGV = ?
-        """;
+  public Optional<Teacher> findByMaGV(Long maGV) {
+    String sql = "SELECT * FROM giao_vien WHERE MaGV = ?";
     try (Connection conn = JdbcConnect.getConnection();
         PreparedStatement ps = conn.prepareStatement(sql)) {
-      ps.setString(1, teacher.getHoTen());
-      ps.setDate(2, teacher.getNgaySinh());
-      ps.setString(3, teacher.getSdt());
-      ps.setString(4, teacher.getEmail());
-      ps.setString(5, teacher.getChuyenMon());
-      ps.setString(6, teacher.getTrangThai());
-      ps.setLong(7, teacher.getMaGV());
-      return ps.executeUpdate() > 0;
+      ps.setLong(1, maGV);
+      try (ResultSet rs = ps.executeQuery()) {
+        if (rs.next()) {
+          return Optional.of(mapResultSetToTeacher(rs));
+        }
+      }
     } catch (Exception e) {
-      throw new RuntimeException("Lỗi khi cập nhật giáo viên", e);
+      throw new RuntimeException("Lỗi khi tìm giáo viên theo mã", e);
     }
+    return Optional.empty();
   }
 
   @Override
@@ -124,39 +106,53 @@ public class TeacherDaoImpl implements TeacherDao {
   }
 
   @Override
-  public Optional<Teacher> findByMaGV(Long maGV) {
-    String sql = "SELECT * FROM giao_vien WHERE MaGV = ?";
+  public Teacher insertTeacher(Teacher teacher) {
+    String sql =
+        """
+        INSERT INTO giao_vien (MaSoGV, HoTen, NgaySinh, SoDienThoai, Email, ChuyenMon, TrangThai)
+        VALUES (?, ?, ?, ?, ?, ?, ?)
+        """;
     try (Connection conn = JdbcConnect.getConnection();
-        PreparedStatement ps = conn.prepareStatement(sql)) {
-      ps.setLong(1, maGV);
-      try (ResultSet rs = ps.executeQuery()) {
+        PreparedStatement ps = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
+      ps.setString(1, teacher.getMaSoGV());
+      ps.setString(2, teacher.getHoTen());
+      ps.setDate(3, teacher.getNgaySinh());
+      ps.setString(4, teacher.getSdt());
+      ps.setString(5, teacher.getEmail());
+      ps.setString(6, teacher.getChuyenMon());
+      ps.setString(7, teacher.getTrangThai());
+      ps.executeUpdate();
+      try (ResultSet rs = ps.getGeneratedKeys()) {
         if (rs.next()) {
-          return Optional.of(mapResultSetToTeacher(rs));
+          teacher.setMaGV(rs.getLong(1));
         }
       }
+      return teacher;
     } catch (Exception e) {
-      throw new RuntimeException("Lỗi khi tìm giáo viên theo mã", e);
+      throw new RuntimeException("Lỗi khi thêm giáo viên", e);
     }
-    return Optional.empty();
   }
 
   @Override
-  public boolean deleteTeachers(List<Long> maGV) {
-    if (maGV == null || maGV.isEmpty()) {
-      return false;
-    }
+  public boolean updateTeacher(Teacher teacher) {
     String sql =
-        "DELETE FROM giao_vien WHERE MaGV IN ("
-            + String.join(",", Collections.nCopies(maGV.size(), "?"))
-            + ")";
+        """
+        UPDATE giao_vien
+        SET HoTen = ?, NgaySinh = ?, SoDienThoai = ?, Email = ?, ChuyenMon = ?, TrangThai = ?
+        WHERE MaGV = ?
+        """;
     try (Connection conn = JdbcConnect.getConnection();
         PreparedStatement ps = conn.prepareStatement(sql)) {
-      for (int i = 0; i < maGV.size(); i++) {
-        ps.setLong(i + 1, maGV.get(i));
-      }
+      ps.setString(1, teacher.getHoTen());
+      ps.setDate(2, teacher.getNgaySinh());
+      ps.setString(3, teacher.getSdt());
+      ps.setString(4, teacher.getEmail());
+      ps.setString(5, teacher.getChuyenMon());
+      ps.setString(6, teacher.getTrangThai());
+      ps.setLong(7, teacher.getMaGV());
       return ps.executeUpdate() > 0;
     } catch (Exception e) {
-      throw new RuntimeException("Lỗi khi xóa giáo viên", e);
+      throw new RuntimeException("Lỗi khi cập nhật giáo viên", e);
     }
   }
 
@@ -187,18 +183,22 @@ public class TeacherDaoImpl implements TeacherDao {
   }
 
   @Override
-  public List<Teacher> findAll() {
-    String sql = "SELECT * FROM giao_vien ORDER BY MaGV DESC";
-    List<Teacher> list = new ArrayList<>();
+  public boolean deleteTeachers(List<Long> maGV) {
+    if (maGV == null || maGV.isEmpty()) {
+      return false;
+    }
+    String sql =
+        "DELETE FROM giao_vien WHERE MaGV IN ("
+            + String.join(",", Collections.nCopies(maGV.size(), "?"))
+            + ")";
     try (Connection conn = JdbcConnect.getConnection();
-        PreparedStatement ps = conn.prepareStatement(sql);
-        ResultSet rs = ps.executeQuery()) {
-      while (rs.next()) {
-        list.add(mapResultSetToTeacher(rs));
+        PreparedStatement ps = conn.prepareStatement(sql)) {
+      for (int i = 0; i < maGV.size(); i++) {
+        ps.setLong(i + 1, maGV.get(i));
       }
-      return list;
+      return ps.executeUpdate() > 0;
     } catch (Exception e) {
-      throw new RuntimeException("Lỗi khi lấy danh sách giáo viên", e);
+      throw new RuntimeException("Lỗi khi xóa giáo viên", e);
     }
   }
 

@@ -18,40 +18,36 @@ import java.util.Optional;
 public class GuardianDaoImpl implements GuardianDao {
 
     @Override
-    public Guardian insertGuardian(Guardian guardian) {
-        String sql = "INSERT INTO nguoi_giam_ho (HoTen, SoDienThoai, Email, DiaChi) VALUES (?, ?, ?, ?)";
+    public List<Guardian> findAll() {
+        String sql = "SELECT * FROM nguoi_giam_ho ORDER BY MaNGH DESC";
+        List<Guardian> list = new ArrayList<>();
         try (Connection conn = JdbcConnect.getConnection();
-             PreparedStatement ps = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
-            ps.setString(1, guardian.getHoTen());
-            ps.setString(2, guardian.getSdt());
-            ps.setString(3, guardian.getEmail());
-            ps.setString(4, guardian.getDiaChi());
-            ps.executeUpdate();
-            try (ResultSet rs = ps.getGeneratedKeys()) {
-                if (rs.next()) {
-                    guardian.setMaNGH(rs.getLong(1));
-                }
+             PreparedStatement ps = conn.prepareStatement(sql);
+             ResultSet rs = ps.executeQuery()) {
+            while (rs.next()) {
+                list.add(mapResultSetToGuardian(rs));
             }
-            return guardian;
+            return list;
         } catch (Exception e) {
-            throw new RuntimeException("Lỗi khi thêm người giám hộ", e);
+            throw new RuntimeException("Lỗi khi lấy danh sách người giám hộ", e);
         }
     }
 
     @Override
-    public boolean updateGuardian(Guardian guardian) {
-        String sql = "UPDATE nguoi_giam_ho SET HoTen = ?, SoDienThoai = ?, Email = ?, DiaChi = ? WHERE MaNGH = ?";
+    public Optional<Guardian> findByMaNGH(Long maNGH) {
+        String sql = "SELECT * FROM nguoi_giam_ho WHERE MaNGH = ?";
         try (Connection conn = JdbcConnect.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql)) {
-            ps.setString(1, guardian.getHoTen());
-            ps.setString(2, guardian.getSdt());
-            ps.setString(3, guardian.getEmail());
-            ps.setString(4, guardian.getDiaChi());
-            ps.setLong(5, guardian.getMaNGH());
-            return ps.executeUpdate() > 0;
+            ps.setLong(1, maNGH);
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) {
+                    return Optional.of(mapResultSetToGuardian(rs));
+                }
+            }
         } catch (Exception e) {
-            throw new RuntimeException("Lỗi khi cập nhật thông tin người giám hộ", e);
+            throw new RuntimeException("Lỗi khi tìm người giám hộ theo mã", e);
         }
+        return Optional.empty();
     }
 
     @Override
@@ -89,38 +85,39 @@ public class GuardianDaoImpl implements GuardianDao {
     }
 
     @Override
-    public Optional<Guardian> findByMaNGH(Long maNGH) {
-        String sql = "SELECT * FROM nguoi_giam_ho WHERE MaNGH = ?";
+    public Guardian insertGuardian(Guardian guardian) {
+        String sql = "INSERT INTO nguoi_giam_ho (HoTen, SoDienThoai, Email, DiaChi) VALUES (?, ?, ?, ?)";
         try (Connection conn = JdbcConnect.getConnection();
-             PreparedStatement ps = conn.prepareStatement(sql)) {
-            ps.setLong(1, maNGH);
-            try (ResultSet rs = ps.executeQuery()) {
+             PreparedStatement ps = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
+            ps.setString(1, guardian.getHoTen());
+            ps.setString(2, guardian.getSdt());
+            ps.setString(3, guardian.getEmail());
+            ps.setString(4, guardian.getDiaChi());
+            ps.executeUpdate();
+            try (ResultSet rs = ps.getGeneratedKeys()) {
                 if (rs.next()) {
-                    return Optional.of(mapResultSetToGuardian(rs));
+                    guardian.setMaNGH(rs.getLong(1));
                 }
             }
+            return guardian;
         } catch (Exception e) {
-            throw new RuntimeException("Lỗi khi tìm người giám hộ theo mã", e);
+            throw new RuntimeException("Lỗi khi thêm người giám hộ", e);
         }
-        return Optional.empty();
     }
 
     @Override
-    public boolean deleteGuardians(List<Long> maNGH) {
-        if (maNGH == null || maNGH.isEmpty()) {
-            return false;
-        }
-        String sql = "DELETE FROM nguoi_giam_ho WHERE MaNGH IN ("
-                + String.join(",", Collections.nCopies(maNGH.size(), "?"))
-                + ")";
+    public boolean updateGuardian(Guardian guardian) {
+        String sql = "UPDATE nguoi_giam_ho SET HoTen = ?, SoDienThoai = ?, Email = ?, DiaChi = ? WHERE MaNGH = ?";
         try (Connection conn = JdbcConnect.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql)) {
-            for (int i = 0; i < maNGH.size(); i++) {
-                ps.setLong(i + 1, maNGH.get(i));
-            }
+            ps.setString(1, guardian.getHoTen());
+            ps.setString(2, guardian.getSdt());
+            ps.setString(3, guardian.getEmail());
+            ps.setString(4, guardian.getDiaChi());
+            ps.setLong(5, guardian.getMaNGH());
             return ps.executeUpdate() > 0;
         } catch (Exception e) {
-            throw new RuntimeException("Lỗi khi xóa người giám hộ", e);
+            throw new RuntimeException("Lỗi khi cập nhật thông tin người giám hộ", e);
         }
     }
 
@@ -150,18 +147,21 @@ public class GuardianDaoImpl implements GuardianDao {
     }
 
     @Override
-    public List<Guardian> findAll() {
-        String sql = "SELECT * FROM nguoi_giam_ho ORDER BY MaNGH DESC";
-        List<Guardian> list = new ArrayList<>();
+    public boolean deleteGuardians(List<Long> maNGH) {
+        if (maNGH == null || maNGH.isEmpty()) {
+            return false;
+        }
+        String sql = "DELETE FROM nguoi_giam_ho WHERE MaNGH IN ("
+                + String.join(",", Collections.nCopies(maNGH.size(), "?"))
+                + ")";
         try (Connection conn = JdbcConnect.getConnection();
-             PreparedStatement ps = conn.prepareStatement(sql);
-             ResultSet rs = ps.executeQuery()) {
-            while (rs.next()) {
-                list.add(mapResultSetToGuardian(rs));
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            for (int i = 0; i < maNGH.size(); i++) {
+                ps.setLong(i + 1, maNGH.get(i));
             }
-            return list;
+            return ps.executeUpdate() > 0;
         } catch (Exception e) {
-            throw new RuntimeException("Lỗi khi lấy danh sách người giám hộ", e);
+            throw new RuntimeException("Lỗi khi xóa người giám hộ", e);
         }
     }
 

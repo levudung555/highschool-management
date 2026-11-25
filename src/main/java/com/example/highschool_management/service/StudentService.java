@@ -6,12 +6,12 @@ import com.example.highschool_management.dto.response.StudentResponse;
 import java.util.List;
 
 public interface StudentService {
-  StudentResponse createStudent(CreateStudentRequest request);
+  List<StudentResponse> getAllStudents();
 
   List<StudentResponse> searchStudents(
       String maSoHS, String hoTen, Long maLop, Long maKhoi, Long maNamHoc);
 
-  List<StudentResponse> getAllStudents();
+  StudentResponse createStudent(CreateStudentRequest request);
 
   StudentResponse updateStudent(Long maHS, UpdateStudentRequest request);
 

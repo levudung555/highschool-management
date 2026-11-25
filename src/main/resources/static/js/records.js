@@ -252,7 +252,7 @@ async function editProfile(type, row = null) {
     }
     const guardianSectionHtml = `
       <div class="col-12 mt-4 pt-3 border-top">
-        <div class="d-flex justify-content-between align-items-center mb-2">
+        <div class="d-flex flex-wrap gap-2 justify-content-between align-items-center mb-2">
           <div>
             <h5 class="mb-0 fs-6">Thông tin người giám hộ (Tùy chọn)</h5>
             <small class="text-secondary">Có thể chọn người giám hộ đã có hoặc nhập người mới.</small>
@@ -327,10 +327,10 @@ function addGuardianInputRow() {
   `;
   container.insertAdjacentHTML("beforeend", rowHtml);
 
-  // Tự động cuộn xuống dòng người giám hộ vừa thêm
-  container.scrollTop = container.scrollHeight;
-
   const newRow = container.lastElementChild;
+  // Chỉ cuộn phần nhập liệu; footer lưu hồ sơ luôn ở ngoài vùng cuộn.
+  const body = container.closest(".modal-body");
+  body.scrollTop += newRow.getBoundingClientRect().top - body.getBoundingClientRect().top;
   newRow.querySelector(".btn-remove-guardian-row").onclick = () => newRow.remove();
 
   // Đảm bảo chỉ 1 người liên hệ chính

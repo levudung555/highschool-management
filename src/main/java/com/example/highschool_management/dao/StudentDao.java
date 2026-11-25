@@ -5,9 +5,11 @@ import java.util.List;
 import java.util.Optional;
 
 public interface StudentDao {
-  Student insertStudent(Student student);
+  List<Student> findAll();
 
-  void updateStudent(Student student);
+  List<Student> searchStudents(String maSoHS, String hoTen, Long maLop, Long maKhoi, Long maNamHoc);
+
+  Optional<Student> findByMaHS(Long maHS);
 
   boolean existsSoDienThoai(String soDienThoai);
 
@@ -15,13 +17,11 @@ public interface StudentDao {
 
   String getLastMaSoHS();
 
-  Optional<Student> findByMaHS(Long maHS);
+  Student insertStudent(Student student);
 
-  List<Student> searchStudents(String maSoHS, String hoTen, Long maLop, Long maKhoi, Long maNamHoc);
-
-  List<Student> findAll();
-
-  boolean deleteStudents(List<Long> maHS);
+  void updateStudent(Student student);
 
   List<Long> findExistingIds(List<Long> maHS);
+
+  boolean deleteStudents(List<Long> maHS);
 }

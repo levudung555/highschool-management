@@ -36,6 +36,29 @@ public class StudentServiceImpl implements StudentService {
   StudentGuardianDao studentGuardianDao;
 
   @Override
+  public List<StudentResponse> getAllStudents() {
+    nguoiDung.yeuCauVaiTro("ADMIN", "BGH", "GIAO_VU");
+    List<Student> students = studentDao.findAll();
+    List<StudentResponse> responses = new ArrayList<>();
+    for (Student s : students) {
+      responses.add(studentMapper.toResponse(s));
+    }
+    return responses;
+  }
+
+  @Override
+  public List<StudentResponse> searchStudents(
+      String maSoHS, String hoTen, Long maLop, Long maKhoi, Long maNamHoc) {
+    nguoiDung.yeuCauVaiTro("ADMIN", "BGH", "GIAO_VU");
+    List<Student> students = studentDao.searchStudents(maSoHS, hoTen, maLop, maKhoi, maNamHoc);
+    List<StudentResponse> responses = new ArrayList<>();
+    for (Student s : students) {
+      responses.add(studentMapper.toResponse(s));
+    }
+    return responses;
+  }
+
+  @Override
   public StudentResponse createStudent(CreateStudentRequest request) {
     nguoiDung.yeuCauVaiTro("ADMIN", "BGH", "GIAO_VU");
     Student student = studentMapper.toEntity(request);
@@ -116,27 +139,20 @@ public class StudentServiceImpl implements StudentService {
     return studentMapper.toResponse(savedStudent);
   }
 
-  @Override
-  public List<StudentResponse> searchStudents(
-      String maSoHS, String hoTen, Long maLop, Long maKhoi, Long maNamHoc) {
-    nguoiDung.yeuCauVaiTro("ADMIN", "BGH", "GIAO_VU");
-    List<Student> students = studentDao.searchStudents(maSoHS, hoTen, maLop, maKhoi, maNamHoc);
-    List<StudentResponse> responses = new ArrayList<>();
-    for (Student s : students) {
-      responses.add(studentMapper.toResponse(s));
-    }
-    return responses;
-  }
+  private String lastMaSoHS() {
+    String lastMaSoHS = studentDao.getLastMaSoHS();
 
-  @Override
-  public List<StudentResponse> getAllStudents() {
-    nguoiDung.yeuCauVaiTro("ADMIN", "BGH", "GIAO_VU");
-    List<Student> students = studentDao.findAll();
-    List<StudentResponse> responses = new ArrayList<>();
-    for (Student s : students) {
-      responses.add(studentMapper.toResponse(s));
+    // DAO chỉ trả mã HS + chữ số; mã nhập từ dữ liệu cũ/demo không tham gia sinh mã.
+    java.math.BigInteger nextNumber =
+        lastMaSoHS == null
+            ? java.math.BigInteger.ONE
+            : new java.math.BigInteger(lastMaSoHS.substring(2)).add(java.math.BigInteger.ONE);
+    if (nextNumber.toString().length() > 18) {
+      throw new com.example.highschool_management.exception.BusinessException(
+          "Đã vượt giới hạn độ dài mã học sinh");
     }
-    return responses;
+
+    return String.format("HS%04d", nextNumber);
   }
 
   @Override
@@ -186,21 +202,5 @@ public class StudentServiceImpl implements StudentService {
     }
 
     return studentDao.deleteStudents(maHS);
-  }
-
-  private String lastMaSoHS() {
-    String lastMaSoHS = studentDao.getLastMaSoHS();
-
-    // DAO chỉ trả mã HS + chữ số; mã nhập từ dữ liệu cũ/demo không tham gia sinh mã.
-    java.math.BigInteger nextNumber =
-        lastMaSoHS == null
-            ? java.math.BigInteger.ONE
-            : new java.math.BigInteger(lastMaSoHS.substring(2)).add(java.math.BigInteger.ONE);
-    if (nextNumber.toString().length() > 18) {
-      throw new com.example.highschool_management.exception.BusinessException(
-          "Đã vượt giới hạn độ dài mã học sinh");
-    }
-
-    return String.format("HS%04d", nextNumber);
   }
 }

@@ -26,6 +26,25 @@ public class TeacherServiceImpl implements TeacherService {
   TeacherMapper teacherMapper;
 
   @Override
+  public List<TeacherResponse> getAllTeachers() {
+    nguoiDung.yeuCauVaiTro("ADMIN", "BGH", "GIAO_VU");
+    return teacherDao.findAll().stream().map(teacherMapper::toResponse).toList();
+  }
+
+  @Override
+  public TeacherResponse getTeacherById(Long maGV) {
+    nguoiDung.yeuCauVaiTro("ADMIN", "BGH", "GIAO_VU");
+    Teacher teacher =
+        teacherDao
+            .findByMaGV(maGV)
+            .orElseThrow(
+                () ->
+                    new com.example.highschool_management.exception.BusinessException(
+                        "Giáo viên không tồn tại"));
+    return teacherMapper.toResponse(teacher);
+  }
+
+  @Override
   public TeacherResponse createTeacher(CreateTeacherRequest request) {
     nguoiDung.yeuCauVaiTro("ADMIN", "BGH", "GIAO_VU");
     if (teacherDao.existsSoDienThoai(request.getSdt())) {
@@ -41,6 +60,19 @@ public class TeacherServiceImpl implements TeacherService {
     Teacher teacher = teacherMapper.toEntity(request);
     teacher.setMaSoGV(generateMaSoGV());
     return teacherMapper.toResponse(teacherDao.insertTeacher(teacher));
+  }
+
+  private String generateMaSoGV() {
+    String lastMaSoGV = teacherDao.getLastMaSoGV();
+    java.math.BigInteger nextNumber =
+        lastMaSoGV == null
+            ? java.math.BigInteger.ONE
+            : new java.math.BigInteger(lastMaSoGV.substring(2)).add(java.math.BigInteger.ONE);
+    if (nextNumber.toString().length() > 28) {
+      throw new com.example.highschool_management.exception.BusinessException(
+          "Đã vượt giới hạn độ dài mã giáo viên");
+    }
+    return String.format("GV%04d", nextNumber);
   }
 
   @Override
@@ -88,37 +120,5 @@ public class TeacherServiceImpl implements TeacherService {
     }
 
     return teacherDao.deleteTeachers(maGV);
-  }
-
-  @Override
-  public TeacherResponse getTeacherById(Long maGV) {
-    nguoiDung.yeuCauVaiTro("ADMIN", "BGH", "GIAO_VU");
-    Teacher teacher =
-        teacherDao
-            .findByMaGV(maGV)
-            .orElseThrow(
-                () ->
-                    new com.example.highschool_management.exception.BusinessException(
-                        "Giáo viên không tồn tại"));
-    return teacherMapper.toResponse(teacher);
-  }
-
-  @Override
-  public List<TeacherResponse> getAllTeachers() {
-    nguoiDung.yeuCauVaiTro("ADMIN", "BGH", "GIAO_VU");
-    return teacherDao.findAll().stream().map(teacherMapper::toResponse).toList();
-  }
-
-  private String generateMaSoGV() {
-    String lastMaSoGV = teacherDao.getLastMaSoGV();
-    java.math.BigInteger nextNumber =
-        lastMaSoGV == null
-            ? java.math.BigInteger.ONE
-            : new java.math.BigInteger(lastMaSoGV.substring(2)).add(java.math.BigInteger.ONE);
-    if (nextNumber.toString().length() > 28) {
-      throw new com.example.highschool_management.exception.BusinessException(
-          "Đã vượt giới hạn độ dài mã giáo viên");
-    }
-    return String.format("GV%04d", nextNumber);
   }
 }

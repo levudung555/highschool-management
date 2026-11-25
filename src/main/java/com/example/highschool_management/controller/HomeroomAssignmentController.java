@@ -30,14 +30,14 @@ public class HomeroomAssignmentController {
         return new ResponseEntity<>(response, HttpStatus.CREATED);
     }
 
-    @GetMapping("/{id}")
-    public ResponseEntity<HomeroomAssignmentResponse> chiTiet(@PathVariable("id") Long maPhanCong) {
-        HomeroomAssignmentResponse response = service.chiTiet(maPhanCong);
-        return new ResponseEntity<>(response, HttpStatus.OK);
-    }
     @GetMapping
     public ResponseEntity<List<HomeroomAssignmentResponse>> lichSu(@RequestParam("maLop") Long maLop) {
         List<HomeroomAssignmentResponse> response = service.lichSu(maLop);
+        return new ResponseEntity<>(response, HttpStatus.OK);
+    }
+    @GetMapping("/{id}")
+    public ResponseEntity<HomeroomAssignmentResponse> chiTiet(@PathVariable("id") Long maPhanCong) {
+        HomeroomAssignmentResponse response = service.chiTiet(maPhanCong);
         return new ResponseEntity<>(response, HttpStatus.OK);
     }
 }

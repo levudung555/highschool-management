@@ -8,9 +8,9 @@ import java.util.List;
 import java.util.Optional;
 
 public interface TeachingAssignmentDao {
-    long tao(TeachingAssignment phanCong);
-    Optional<TeachingAssignment> timTheoMa(Long maPhanCong);
-    List<TeachingAssignment> lichSuTheoLopMonHoc(Long maLopMonHoc);
-    void ghiNhatKyTao(Long maTaiKhoan, TeachingAssignment phanCong, LocalDateTime thoiDiem);
     boolean coPhanCongTrungThoiGian(Long maLopMonHoc, LocalDate tuNgay, LocalDate denNgayHieuLuc);
+    long tao(TeachingAssignment phanCong);
+    void ghiNhatKyTao(Long maTaiKhoan, TeachingAssignment phanCong, LocalDateTime thoiDiem);
+    List<TeachingAssignment> lichSuTheoLopMonHoc(Long maLopMonHoc);
+    Optional<TeachingAssignment> timTheoMa(Long maPhanCong);
 }

@@ -1,20 +1,21 @@
 package com.example.highschool_management.dao.jdbc;
 
 import com.example.highschool_management.dao.EnrollmentDao;
-import com.example.highschool_management.dto.response.ClassStudentResponse;
+import com.example.highschool_management.dto.response.*;
 
-import com.example.highschool_management.dto.response.EnrollmentStudentResponse;
-import com.example.highschool_management.dto.response.SchoolYearPeriodResponse;
 import com.example.highschool_management.exception.BusinessException;
 import com.example.highschool_management.exception.ResourceNotFoundException;
 import com.example.highschool_management.model.Enrollment;
 
 import java.awt.image.Kernel;
+import java.math.BigDecimal;
 import java.sql.PreparedStatement;
 import java.sql.Statement;
 import java.sql.Types;
 import java.time.*;
 import java.util.*;
+
+import com.example.highschool_management.model.Grade10PlacementCandidate;
 import org.springframework.jdbc.core.*;
 import org.springframework.jdbc.support.GeneratedKeyHolder;
 import org.springframework.jdbc.support.KeyHolder;
@@ -105,6 +106,96 @@ public class EnrollmentDaoImpl implements EnrollmentDao {
         """;
 
     @Override
+    public SchoolYearPeriodResponse namHoc(Long maNamHoc){
+        String sql = """
+                select NgayBatDau, NgayKetThuc
+                from nam_hoc
+                where MaNH = ?""";
+
+        List<SchoolYearPeriodResponse> danhSach = jdbc.query(sql,
+                (rs, rowNum) -> new SchoolYearPeriodResponse(
+                    rs.getObject("NgayBatDau", LocalDate.class),
+                    rs.getObject("NgayKetThuc", LocalDate.class)
+                ), maNamHoc);
+        if (danhSach.isEmpty()) {
+            throw new ResourceNotFoundException("Không tìm thấy năm học có mã: " + maNamHoc);
+        }
+        return danhSach.get(0);
+    }
+
+    // Lấy hồ sơ của năm học theo tổ hợp và điểm giảm dần. Khi bằng điểm, mã học sinh quyết định thứ tự.
+    @Override
+    public List<Grade10PlacementCandidate> danhSachXepLop10DauNam(Long maNamHoc){
+        String sql = """
+                SELECT hsnh.MaHoSoNhapHoc,
+                hs.MaHS,
+                hs.MaSoHS,
+                hs.HoTen,
+                th.MaToHop,
+                th.KyHieu,
+                hsnh.TongDiemDauVao
+                FROM ho_so_nhap_hoc hsnh
+                JOIN hoc_sinh hs ON hs.MaHS = hsnh.MaHS
+                JOIN to_hop_mon th ON th.MaToHop = hsnh.MaToHop
+                WHERE hsnh.MaNH = ?
+                ORDER BY th.KyHieu, hsnh.TongDiemDauVao DESC, hs.MaHS
+                """;
+        return jdbc.query(sql, (rs, rowNum) -> new Grade10PlacementCandidate(
+                rs.getLong("MaHoSoNhapHoc"),
+                rs.getLong("MaHS"),
+                rs.getString("MaSoHS"),
+                rs.getString("HoTen"),
+                rs.getLong("MaToHop"),
+                rs.getString("KyHieu"),
+                rs.getBigDecimal("TongDiemDauVao")
+        ), maNamHoc);
+    }
+
+    // Kiểm tra năm học đã có đợt chốt để ngăn ghi kết quả lần thứ hai.
+    @Override
+    public boolean daChotXepLop10(Long maNamHoc) {
+        String sql = """
+            SELECT EXISTS (
+                SELECT 1
+                FROM dot_xep_lop_10
+                WHERE MaNH = ?
+            )
+            """;
+
+        return Boolean.TRUE.equals(
+                jdbc.queryForObject(sql, Boolean.class, maNamHoc));
+    }
+    // Đọc ngày vào lớp chung mà giáo vụ đã chọn khi chốt đợt.
+    @Override
+    public Optional<LocalDate> ngayVaoLopDaChot(Long maNamHoc) {
+        return jdbc.query("SELECT NgayVaoLop FROM dot_xep_lop_10 WHERE MaNH = ?",
+                (rs, rowNum) -> rs.getObject("NgayVaoLop", LocalDate.class), maNamHoc)
+                .stream().findFirst();
+    }
+
+    // Lưu người chốt, thời điểm chốt, ngày vào lớp chung và mã phương án của đợt.
+    @Override
+    public void luuDotChotXepLop10(
+            Long maNamHoc,
+            long maTaiKhoanChot,
+            LocalDate ngayVaoLop,
+            LocalDateTime thoiDiemChot,
+            String maKiemTraPhuongAn) {
+
+        String sql = """
+            INSERT INTO dot_xep_lop_10 (
+                MaNH, MaTKChot, NgayVaoLop,
+                ThoiDiemChot, MaKiemTraPhuongAn
+            )
+            VALUES (?, ?, ?, ?, ?)
+            """;
+
+        jdbc.update(sql, maNamHoc, maTaiKhoanChot, ngayVaoLop,
+                thoiDiemChot, maKiemTraPhuongAn);
+    }
+
+
+    @Override
     public boolean khoaHocSinh(Long maHocSinh){
         String sql = """
                 select MaHs
@@ -127,16 +218,60 @@ public class EnrollmentDaoImpl implements EnrollmentDao {
                 join lop_hoc l on l.MaLop = x.MaLop
                 where x.MaHS = ?
                 and l.MaNH = ?""";
-        Long count = jdbc.queryForObject(sql, Long.class, maNamHoc, maNamHoc);
+        Long count = jdbc.queryForObject(sql, Long.class, maHocSinh, maNamHoc);
         return count != null && count > 0;
     }
+    // Tìm ngày đầu tiên lớp đã đủ sĩ số, xét cả ngày nhận học sinh và các ngày có học sinh vào lớp sau đó.
+    @Override
+    public Optional<LocalDate> timNgayLopHetCho(
+            Long maLop,
+            LocalDate ngayChuyen,
+            LocalDate ngayKetThucNamHoc,
+            int siSoToiDa) {
 
+        String sql = """
+            WITH moc_kiem_tra AS (
+                SELECT CAST(? AS DATE) AS Ngay
+
+                UNION
+
+                SELECT TuNgay
+                FROM xep_lop
+                WHERE MaLop = ?
+                  AND TuNgay BETWEEN ? AND ?
+            )
+            SELECT moc.Ngay
+            FROM moc_kiem_tra moc
+            JOIN xep_lop xl
+              ON xl.MaLop = ?
+             AND xl.TuNgay <= moc.Ngay
+             AND (xl.DenNgay IS NULL OR xl.DenNgay >= moc.Ngay)
+            GROUP BY moc.Ngay
+            HAVING COUNT(DISTINCT xl.MaHS) >= ?
+            ORDER BY moc.Ngay
+            LIMIT 1
+            """;
+
+        return jdbc.query(
+                sql,
+                (rs, rowNum) -> rs.getObject("Ngay", LocalDate.class),
+                ngayChuyen,
+                maLop,
+                ngayChuyen,
+                ngayKetThucNamHoc,
+                maLop,
+                siSoToiDa
+        ).stream().findFirst();
+    }
     @Override
     public long tao(Enrollment en){
         String sql = """
-                insert into xep_lop(MaHS, MaLop, TuNgay, DenNgay, LyDoKetThuc, MaTKNguoiThucHien, ThoiDiemThucHien)
-                values(?, ?, ?, ?, ?, ?, ?)
-                """;
+        INSERT INTO xep_lop (
+            MaHS, MaLop, TuNgay, DenNgay, LyDoKetThuc,
+            MaTKNguoiThucHien, ThoiDiemThucHien, MaHoSoNhapHoc
+        )
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        """;
         GeneratedKeyHolder keyHolder = new GeneratedKeyHolder();
          jdbc.update(connection ->{
             PreparedStatement ps = connection.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS);
@@ -147,6 +282,7 @@ public class EnrollmentDaoImpl implements EnrollmentDao {
             ps.setString(5, en.getLyDoKetThuc());
             ps.setLong(6, en.getMaTaiKhoanThucHien());
             ps.setObject(7, en.getThoiDiemThucHien(), Types.TIMESTAMP);
+            ps.setObject(8, en.getMaHoSoNhapHoc(), Types.BIGINT);
             return ps;
         }, keyHolder);
         Number maDuocTao = keyHolder.getKey();
@@ -158,43 +294,6 @@ public class EnrollmentDaoImpl implements EnrollmentDao {
         }
         return maDuocTao.longValue();
     }
-    @Override
-    public SchoolYearPeriodResponse namHoc(Long maNamHoc){
-        String sql = """
-                select NgayBatDau, NgayKetThuc
-                from nam_hoc
-                where MaNH = ?""";
-
-        List<SchoolYearPeriodResponse> danhSach = jdbc.query(sql,
-                (rs, rowNum) -> new SchoolYearPeriodResponse(
-                    rs.getObject("NgayBatDau", LocalDate.class),
-                    rs.getObject("NgayKetThuc", LocalDate.class)
-                ), maNamHoc);
-        if (danhSach.isEmpty()) {
-            throw new ResourceNotFoundException("Không tìm thấy năm học có mã: " + maNamHoc);
-        }
-        return danhSach.get(0);
-    }
-
-    @Override
-    public Optional<Enrollment> timTheoMa(Long maXepLop) {
-        String sql = """
-                select x.MaXL, x.MaHS, x.MaLop, x.TuNgay, x.DenNgay, x.LyDoKetThuc, x.MaTKNguoiThucHien, x.ThoiDiemThucHien,
-                       h.HoTen, h.MaSoHS, l.TenLop, n.MaSoNH, t.HoTen AS TenNguoiThucHien
-                from xep_lop x
-                join hoc_sinh h on h.MaHS=x.MaHS
-                join lop_hoc l on l.MaLop=x.MaLop
-                join nam_hoc n on n.MaNH=l.MaNH
-                join tai_khoan t on t.MaTK = x.MaTKNguoiThucHien
-                where x.MaXL = ?
-                """;
-        List<Enrollment> danhSach = jdbc.query(sql, MAPPER, maXepLop);
-        if (danhSach.isEmpty()) {
-            return Optional.empty();
-        }
-        return Optional.of(danhSach.get(0));
-    }
-
 
     @Override
     public Optional<Enrollment> timTheoMaDeCapNhat(Long maXepLop){
@@ -211,23 +310,6 @@ public class EnrollmentDaoImpl implements EnrollmentDao {
         return timTheoMa(maXepLop); //doc day du thong tin xeplop
     }
 
-    @Override
-    public void ketThuc(Long maXepLop, LocalDate denNgay, String lyDo){
-        String sql = """
-                update xep_lop
-                set DenNgay = ?,
-                LyDoKetThuc = ?
-                where MaXL = ?
-                And DenNgay IS NULL
-                And TuNgay <= ?
-                """;
-        int soDongBiCapNhat = jdbc.update(sql, denNgay, lyDo, maXepLop, denNgay);
-        if (soDongBiCapNhat != 1) {
-            throw new BusinessException( "Không thể kết thúc phân lớp: "
-                    + "nguồn không tồn tại, đã kết thúc "
-                    + "hoặc ngày kết thúc không hợp lệ");
-        }
-    }
     @Override
     public boolean trungThoiGian(Long maHocSinh, Long maNH, LocalDate tuNgay, LocalDate denNgay, Long boQuaMaXepLop){
         String sql = """
@@ -254,6 +336,25 @@ public class EnrollmentDaoImpl implements EnrollmentDao {
 
         return Objects.requireNonNull(soPhanLopTrung) > 0;
     }
+
+    @Override
+    public void ketThuc(Long maXepLop, LocalDate denNgay, String lyDo){
+        String sql = """
+                update xep_lop
+                set DenNgay = ?,
+                LyDoKetThuc = ?
+                where MaXL = ?
+                And DenNgay IS NULL
+                And TuNgay <= ?
+                """;
+        int soDongBiCapNhat = jdbc.update(sql, denNgay, lyDo, maXepLop, denNgay);
+        if (soDongBiCapNhat != 1) {
+            throw new BusinessException( "Không thể kết thúc phân lớp: "
+                    + "nguồn không tồn tại, đã kết thúc "
+                    + "hoặc ngày kết thúc không hợp lệ");
+        }
+    }
+
     @Override
     public void ghiNhatKyChuyenLop(Long maTaiKhoan, Long maXepLopNguon, Long maXepLopDich, LocalDate ngayChuyen, String lyDo, LocalDateTime thoiDiem
     ) {
@@ -290,6 +391,85 @@ public class EnrollmentDaoImpl implements EnrollmentDao {
         LocalDate ngayKetThucNguon = ngayChuyen.minusDays(1);
 
         jdbc.update(sql, maTaiKhoan, maXepLopNguon.toString(), maXepLopNguon, maXepLopNguon, maXepLopDich, ngayKetThucNguon.toString(), ngayChuyen.toString(), lyDo, thoiDiem);
+    }
+
+    @Override
+    public Optional<Enrollment> timTheoMa(Long maXepLop) {
+        String sql = """
+                select x.MaXL, x.MaHS, x.MaLop, x.TuNgay, x.DenNgay, x.LyDoKetThuc, x.MaTKNguoiThucHien, x.ThoiDiemThucHien,
+                       h.HoTen, h.MaSoHS, l.TenLop, n.MaSoNH, t.HoTen AS TenNguoiThucHien
+                from xep_lop x
+                join hoc_sinh h on h.MaHS=x.MaHS
+                join lop_hoc l on l.MaLop=x.MaLop
+                join nam_hoc n on n.MaNH=l.MaNH
+                join tai_khoan t on t.MaTK = x.MaTKNguoiThucHien
+                where x.MaXL = ?
+                """;
+        List<Enrollment> danhSach = jdbc.query(sql, MAPPER, maXepLop);
+        if (danhSach.isEmpty()) {
+            return Optional.empty();
+        }
+        return Optional.of(danhSach.get(0));
+    }
+
+    @Override
+    public long demDanhSachLop(Long maLop, LocalDate ngayHienTai) {
+        String sql = "SELECT COUNT(*) " + DANH_SACH_LOP_FROM;
+
+        Long count = jdbc.queryForObject(
+                sql,
+                Long.class,
+                maLop,
+                ngayHienTai,
+                ngayHienTai,
+                ngayHienTai
+        );
+
+        return count != null ? count : 0;
+    }
+
+    @Override
+    public List<ClassStudentResponse> danhSachLop(
+            Long maLop,
+            LocalDate ngay,
+            int kichThuoc,
+            long viTriBatDau
+    ) {
+        String sql = """
+            SELECT
+                x.MaXL,
+                h.MaHS,
+                h.MaSoHS,
+                h.HoTen,
+                h.NgaySinh,
+                x.TuNgay,
+                x.DenNgay
+                
+            """
+                + DANH_SACH_LOP_FROM
+                + """
+            
+            ORDER BY h.MaHS, x.MaXL
+            LIMIT ? OFFSET ?
+            """;
+        return jdbc.query(
+                sql,
+                (rs, rowNum) -> new ClassStudentResponse(
+                        rs.getLong("MaXL"),
+                        rs.getLong("MaHS"),
+                        rs.getString("MaSoHS"),
+                        rs.getString("HoTen"),
+                        rs.getObject("NgaySinh", LocalDate.class),
+                        rs.getObject("TuNgay", LocalDate.class),
+                        rs.getObject("DenNgay", LocalDate.class)
+                ),
+                maLop,
+                ngay,
+                ngay,
+                ngay,
+                kichThuoc,
+                viTriBatDau
+        );
     }
 
     @Override
@@ -367,63 +547,7 @@ public class EnrollmentDaoImpl implements EnrollmentDao {
 
     }
 
-    @Override
-    public long demDanhSachLop(Long maLop, LocalDate ngayHienTai) {
-        String sql = "SELECT COUNT(*) " + DANH_SACH_LOP_FROM;
 
-        Long count = jdbc.queryForObject(
-                sql,
-                Long.class,
-                maLop,
-                ngayHienTai,
-                ngayHienTai,
-                ngayHienTai
-        );
 
-        return count != null ? count : 0;
-    }
 
-    @Override
-    public List<ClassStudentResponse> danhSachLop(
-            Long maLop,
-            LocalDate ngay,
-            int kichThuoc,
-            long viTriBatDau
-    ) {
-        String sql = """
-            SELECT
-                x.MaXL,
-                h.MaHS,
-                h.MaSoHS,
-                h.HoTen,
-                h.NgaySinh,
-                x.TuNgay,
-                x.DenNgay
-                
-            """
-                + DANH_SACH_LOP_FROM
-                + """
-            
-            ORDER BY h.MaHS, x.MaXL
-            LIMIT ? OFFSET ?
-            """;
-        return jdbc.query(
-                sql,
-                (rs, rowNum) -> new ClassStudentResponse(
-                        rs.getLong("MaXL"),
-                        rs.getLong("MaHS"),
-                        rs.getString("MaSoHS"),
-                        rs.getString("HoTen"),
-                        rs.getObject("NgaySinh", LocalDate.class),
-                        rs.getObject("TuNgay", LocalDate.class),
-                        rs.getObject("DenNgay", LocalDate.class)
-                ),
-                maLop,
-                ngay,
-                ngay,
-                ngay,
-                kichThuoc,
-                viTriBatDau
-        );
-    }
 }

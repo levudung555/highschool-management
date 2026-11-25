@@ -11,6 +11,6 @@ import java.util.List;
 
 public interface HomeroomAssignmentService {
     HomeroomAssignmentResponse taoPhanCongCN(@NotNull @Valid CreateHomeroomAssignmentRequest request);
-    HomeroomAssignmentResponse chiTiet(Long maPhanCong);
     List<HomeroomAssignmentResponse> lichSu(Long maLop);
+    HomeroomAssignmentResponse chiTiet(Long maPhanCong);
 }

@@ -42,16 +42,6 @@ public class AuthServiceImpl implements AuthService {
     this.dummy = passwords.encode("not-a-real-user-password");
   }
 
-  private NguoiDung response(UserAccount user) {
-    return new NguoiDung(
-        user.maTaiKhoan(),
-        user.tenDangNhap(),
-        user.hoTen(),
-        dao.vaiTro(user.maTaiKhoan()).stream()
-            .filter(SchoolSecurityConfig.ROLES::contains)
-            .toList());
-  }
-
   @Override
   public DangNhap dangNhap(LoginRequest request) {
     if (request.matKhau().getBytes(StandardCharsets.UTF_8).length > 72)
@@ -85,10 +75,6 @@ public class AuthServiceImpl implements AuthService {
     return new DangNhap(token, "Bearer", end, profile);
   }
 
-  private long actor() {
-    return current.yeuCauVaiTro("ADMIN", "BGH", "GIAO_VU", "GIAO_VIEN");
-  }
-
   @Override
   public NguoiDung hienTai() {
     return response(
@@ -100,5 +86,19 @@ public class AuthServiceImpl implements AuthService {
   @Transactional
   public void dangXuat() {
     dao.thuHoiToken(actor());
+  }
+
+  private long actor() {
+    return current.yeuCauVaiTro("ADMIN", "BGH", "GIAO_VU", "GIAO_VIEN");
+  }
+
+  private NguoiDung response(UserAccount user) {
+    return new NguoiDung(
+        user.maTaiKhoan(),
+        user.tenDangNhap(),
+        user.hoTen(),
+        dao.vaiTro(user.maTaiKhoan()).stream()
+            .filter(SchoolSecurityConfig.ROLES::contains)
+            .toList());
   }
 }
