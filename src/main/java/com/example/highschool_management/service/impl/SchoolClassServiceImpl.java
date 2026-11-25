@@ -42,7 +42,7 @@ public class SchoolClassServiceImpl implements SchoolClassService {
   @Override
   @Transactional(readOnly = true)
   public ClassCatalogResponse danhMuc() {
-    nguoiDung.yeuCauVaiTro("ADMIN", "BGH", "GIAO_VU");
+    nguoiDung.yeuCauVaiTro("ADMIN", "BGH", "GIAO_VU", "GIAO_VIEN");
     return new ClassCatalogResponse(
         schoolClassDao.danhSachNamHoc(), schoolClassDao.danhSachKhoi(), LocalDate.now(clock));
   }

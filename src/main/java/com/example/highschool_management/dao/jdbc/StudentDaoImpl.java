@@ -271,6 +271,34 @@ public class StudentDaoImpl implements StudentDao {
   }
 
   @Override
+  public List<Long> findEnrolledStudentIds(List<Long> maHS) {
+    if (maHS == null || maHS.isEmpty()) {
+      return Collections.emptyList();
+    }
+    String sql =
+        "SELECT DISTINCT MaHS FROM xep_lop WHERE MaHS IN ("
+            + String.join(",", Collections.nCopies(maHS.size(), "?"))
+            + ")";
+    List<Long> enrolledIds = new ArrayList<>();
+    try (Connection conn = JdbcConnect.getConnection();
+        PreparedStatement ps = conn.prepareStatement(sql)) {
+
+      for (int i = 0; i < maHS.size(); i++) {
+        ps.setLong(i + 1, maHS.get(i));
+      }
+
+      try (ResultSet rs = ps.executeQuery()) {
+        while (rs.next()) {
+          enrolledIds.add(rs.getLong("MaHS"));
+        }
+      }
+      return enrolledIds;
+    } catch (Exception e) {
+      throw new RuntimeException("Lỗi khi kiểm tra học sinh đã xếp lớp", e);
+    }
+  }
+
+  @Override
   public boolean deleteStudents(List<Long> maHS) {
 
     String sql =

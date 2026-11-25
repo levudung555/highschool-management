@@ -205,4 +205,29 @@ public class StudentGuardianDaoImpl implements StudentGuardianDao {
             throw new RuntimeException("Lỗi khi xóa liên kết theo mã học sinh", e);
         }
     }
+
+    @Override
+    public List<Long> findGuardianIdsByMaHSs(List<Long> maHSs) {
+        if (maHSs == null || maHSs.isEmpty()) {
+            return Collections.emptyList();
+        }
+        String sql = "SELECT DISTINCT MaNGH FROM hs_nguoi_giam_ho WHERE MaHS IN ("
+                + String.join(",", Collections.nCopies(maHSs.size(), "?"))
+                + ")";
+        List<Long> list = new ArrayList<>();
+        try (Connection conn = JdbcConnect.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            for (int i = 0; i < maHSs.size(); i++) {
+                ps.setLong(i + 1, maHSs.get(i));
+            }
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    list.add(rs.getLong("MaNGH"));
+                }
+            }
+            return list;
+        } catch (Exception e) {
+            throw new RuntimeException("Lỗi khi lấy danh sách mã người giám hộ theo mã học sinh", e);
+        }
+    }
 }

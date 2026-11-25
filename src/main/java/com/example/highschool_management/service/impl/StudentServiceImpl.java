@@ -201,6 +201,35 @@ public class StudentServiceImpl implements StudentService {
           "Không tìm thấy học sinh có mã: " + notFoundIds);
     }
 
-    return studentDao.deleteStudents(maHS);
+    // Kiểm tra xem có học sinh nào đã được xếp lớp hay chưa
+    List<Long> enrolledStudentIds = studentDao.findEnrolledStudentIds(maHS);
+    if (!enrolledStudentIds.isEmpty()) {
+      throw new com.example.highschool_management.exception.BusinessException(
+          "Học sinh có mã " + enrolledStudentIds + " đã được xếp lớp, không thể xóa");
+    }
+
+    // Lấy danh sách người giám hộ liên kết với các học sinh sắp bị xóa
+    List<Long> guardianIds = studentGuardianDao.findGuardianIdsByMaHSs(maHS);
+
+    // Xóa liên kết trong bảng hs_nguoi_giam_ho
+    studentGuardianDao.deleteByMaHSs(maHS);
+
+    // Xóa học sinh
+    boolean deleted = studentDao.deleteStudents(maHS);
+
+    // Xóa người giám hộ nếu không còn liên kết với bất kỳ học sinh nào khác
+    if (deleted && !guardianIds.isEmpty()) {
+      List<Long> guardiansToDelete = new ArrayList<>();
+      for (Long gId : guardianIds) {
+        if (!studentGuardianDao.existsAnyStudentLinked(gId)) {
+          guardiansToDelete.add(gId);
+        }
+      }
+      if (!guardiansToDelete.isEmpty()) {
+        guardianDao.deleteGuardians(guardiansToDelete);
+      }
+    }
+
+    return deleted;
   }
 }

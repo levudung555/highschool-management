@@ -3,8 +3,15 @@ package com.example.highschool_management.dto.response;
 import java.time.LocalDate;
 
 public record ClassSubjectOptionResponse(
-        Long maLopMonHoc, Long maLop, String tenLop,
-        Long maNamHoc, String namHoc, String tenMonHoc,
-        Integer soHocKy, LocalDate batDau, LocalDate ketThuc,
-        String trangThaiLop
-) {}
+        Long maLMH,
+        Long maLop,
+        String tenLop,
+        Long maNH,
+        String maSoNH,
+        String tenMon,
+        Integer soHocKy,
+        LocalDate ngayBatDau,
+        LocalDate ngayKetThuc,
+        String trangThai
+) {
+}

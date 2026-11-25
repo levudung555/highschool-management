@@ -23,5 +23,7 @@ public interface StudentDao {
 
   List<Long> findExistingIds(List<Long> maHS);
 
+  List<Long> findEnrolledStudentIds(List<Long> maHS);
+
   boolean deleteStudents(List<Long> maHS);
 }

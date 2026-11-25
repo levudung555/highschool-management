@@ -19,10 +19,39 @@ public class GlobalExceptionHandler {
   @ExceptionHandler(java.sql.SQLIntegrityConstraintViolationException.class)
   public ResponseEntity<ApiError> xuLyRangBuocJdbc(
       java.sql.SQLIntegrityConstraintViolationException exception, HttpServletRequest request) {
-    return taoPhanHoi(
-        HttpStatus.CONFLICT,
-        "Không thể lưu hoặc xóa: dữ liệu bị trùng hoặc hồ sơ đang có dữ liệu liên quan.",
-        request);
+    String msg = exception.getMessage() != null ? exception.getMessage() : "";
+    int errorCode = exception.getErrorCode();
+
+    String thongBao;
+    if (errorCode == 1062 || msg.contains("Duplicate entry")) {
+      thongBao = "Dữ liệu bị trùng lặp (đã tồn tại trong hệ thống)";
+    } else if (errorCode == 1451 || msg.contains("a foreign key constraint fails")) {
+      if (msg.contains("fk_XEP_LOP_MaHS") || msg.contains("xep_lop")) {
+        thongBao = "Không thể xóa học sinh vì đã có dữ liệu xếp lớp";
+      } else if (msg.contains("fk_KET_QUA_MON_MaHS") || msg.contains("ket_qua_mon")) {
+        thongBao = "Không thể xóa học sinh vì đã có điểm/kết quả môn học";
+      } else if (msg.contains("fk_TONG_KET_HOC_KY_MaHS") || msg.contains("tong_ket_hoc_ky")) {
+        thongBao = "Không thể xóa học sinh vì đã có kết quả tổng kết học kỳ";
+      } else if (msg.contains("fk_TONG_KET_NAM_MaHS") || msg.contains("tong_ket_nam")) {
+        thongBao = "Không thể xóa học sinh vì đã có kết quả tổng kết năm học";
+      } else if (msg.contains("fk_HS_NGUOI_GIAM_HO_MaHS")) {
+        thongBao = "Không thể xóa học sinh vì đang có người giám hộ liên kết";
+      } else if (msg.contains("fk_HS_NGUOI_GIAM_HO_MaNGH")) {
+        thongBao = "Không thể xóa người giám hộ vì đang liên kết với học sinh";
+      } else if (msg.contains("fk_PHAN_CONG_CHU_NHIEM_MaGV")) {
+        thongBao = "Không thể xóa giáo viên vì đang có phân công chủ nhiệm";
+      } else if (msg.contains("fk_PHAN_CONG_GIANG_DAY_MaGV")) {
+        thongBao = "Không thể xóa giáo viên vì đang có phân công giảng dạy";
+      } else if (msg.contains("fk_TAI_KHOAN_MaGV")) {
+        thongBao = "Không thể xóa giáo viên vì đã có tài khoản người dùng liên kết";
+      } else {
+        thongBao = "Không thể xóa vì hồ sơ đang có dữ liệu liên quan khác trong hệ thống";
+      }
+    } else {
+      thongBao = "Lỗi ràng buộc dữ liệu: " + exception.getMessage();
+    }
+
+    return taoPhanHoi(HttpStatus.CONFLICT, thongBao, request);
   }
 
   @ExceptionHandler(ResourceNotFoundException.class)
@@ -59,8 +88,42 @@ public class GlobalExceptionHandler {
   @ExceptionHandler(DataIntegrityViolationException.class)
   public ResponseEntity<ApiError> xuLyRangBuocDuLieu(
       DataIntegrityViolationException exception, HttpServletRequest request) {
-    return taoPhanHoi(
-        HttpStatus.CONFLICT, "Dữ liệu xung đột với ràng buộc trong cơ sở dữ liệu", request);
+    String msg = exception.getMessage() != null ? exception.getMessage() : "";
+    Throwable rootCause = exception.getRootCause();
+    if (rootCause != null && rootCause.getMessage() != null) {
+      msg += " " + rootCause.getMessage();
+    }
+
+    String thongBao;
+    if (msg.contains("Duplicate entry")) {
+      thongBao = "Dữ liệu bị trùng lặp (đã tồn tại trong hệ thống)";
+    } else if (msg.contains("a foreign key constraint fails") || msg.contains("foreign key")) {
+      if (msg.contains("fk_XEP_LOP_MaHS") || msg.contains("xep_lop")) {
+        thongBao = "Không thể xóa học sinh vì đã có dữ liệu xếp lớp";
+      } else if (msg.contains("fk_KET_QUA_MON_MaHS") || msg.contains("ket_qua_mon")) {
+        thongBao = "Không thể xóa học sinh vì đã có điểm/kết quả môn học";
+      } else if (msg.contains("fk_TONG_KET_HOC_KY_MaHS") || msg.contains("tong_ket_hoc_ky")) {
+        thongBao = "Không thể xóa học sinh vì đã có kết quả tổng kết học kỳ";
+      } else if (msg.contains("fk_TONG_KET_NAM_MaHS") || msg.contains("tong_ket_nam")) {
+        thongBao = "Không thể xóa học sinh vì đã có kết quả tổng kết năm học";
+      } else if (msg.contains("fk_HS_NGUOI_GIAM_HO_MaHS")) {
+        thongBao = "Không thể xóa học sinh vì đang có người giám hộ liên kết";
+      } else if (msg.contains("fk_HS_NGUOI_GIAM_HO_MaNGH")) {
+        thongBao = "Không thể xóa người giám hộ vì đang liên kết với học sinh";
+      } else if (msg.contains("fk_PHAN_CONG_CHU_NHIEM_MaGV")) {
+        thongBao = "Không thể xóa giáo viên vì đang có phân công chủ nhiệm";
+      } else if (msg.contains("fk_PHAN_CONG_GIANG_DAY_MaGV")) {
+        thongBao = "Không thể xóa giáo viên vì đang có phân công giảng dạy";
+      } else if (msg.contains("fk_TAI_KHOAN_MaGV")) {
+        thongBao = "Không thể xóa giáo viên vì đã có tài khoản người dùng liên kết";
+      } else {
+        thongBao = "Không thể xóa vì hồ sơ đang có dữ liệu liên quan khác trong hệ thống";
+      }
+    } else {
+      thongBao = "Dữ liệu xung đột với ràng buộc trong cơ sở dữ liệu";
+    }
+
+    return taoPhanHoi(HttpStatus.CONFLICT, thongBao, request);
   }
 
   @ExceptionHandler(AccessException.class)
