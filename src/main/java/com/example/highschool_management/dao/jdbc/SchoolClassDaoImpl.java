@@ -4,6 +4,8 @@ import com.example.highschool_management.dao.SchoolClassDao;
 import com.example.highschool_management.dto.response.ClassCatalogResponse.*;
 import com.example.highschool_management.dto.response.SchoolClassListResponse;
 import com.example.highschool_management.model.SchoolClass;
+import com.example.highschool_management.dto.response.Grade10ClassProposalResponse;
+import com.example.highschool_management.dto.response.SubjectCombinationPreferenceSummaryResponse;
 import java.sql.Statement;
 import java.time.LocalDate;
 import java.util.List;
@@ -267,4 +269,192 @@ public class SchoolClassDaoImpl implements SchoolClassDao {
             viTriBatDau
     );
   }
+
+@Override
+  public List<SubjectCombinationPreferenceSummaryResponse> thongKeNguyenVongTheoNam(Long maNamHoc){
+     String sql = """
+             SELECT
+                    nh.MaSoNH AS NamHoc,
+                    th.MaToHop AS MaToHop,
+                    th.KyHieu AS KyHieu,
+                    th.TenToHop AS TenToHop,
+                    COUNT(hs.MaHoSoNhapHoc) AS SoHocSinhDangKy
+             FROM nam_hoc nh 
+             JOIN to_hop_mon th ON th.MaNH = nh.MaNH
+             LEFT JOIN ho_so_nhap_hoc hs ON hs.MaNH = nh.MaNH AND hs.MaToHop = th.MaToHop
+             WHERE nh.MaNH = ?
+             GROUP BY nh.MaSoNH, th.MaToHop, th.KyHieu, th.TenToHop
+             ORDER BY th.KyHieu
+             """;
+     return jdbcTemplate.query(
+             sql,
+             (resultSet, rowNumber) -> new SubjectCombinationPreferenceSummaryResponse(
+                     resultSet.getLong("MaToHop"),
+                     resultSet.getString("KyHieu"),
+                     resultSet.getString("TenToHop"),
+                     resultSet.getLong("SoHocSinhDangKy")
+             ),
+             maNamHoc
+     );
+  }
+
+    // Trừ sức chứa của các lớp 10 đã chuẩn bị khỏi số hồ sơ từng tổ hợp, rồi quy đổi số chỗ thiếu thành số lớp mới.
+    @Override
+    public List<Grade10ClassProposalResponse> deXuatMoLop10(Long maNamHoc, LocalDate homNay, int chiTieuLopMoi) {
+        String sql = """
+        WITH nam_dang_xet AS (
+            SELECT MaNH, MaSoNH
+            FROM nam_hoc
+            WHERE MaNH = ?
+              AND NgayKetThuc >= ?
+        ),
+        nhu_cau AS (
+            SELECT
+                nam.MaSoNH,
+                th.MaToHop,
+                th.KyHieu,
+                COUNT(hs.MaHoSoNhapHoc) AS TongNguyenVong
+            FROM nam_dang_xet nam
+            JOIN to_hop_mon th ON th.MaNH = nam.MaNH
+            LEFT JOIN ho_so_nhap_hoc hs
+                ON hs.MaNH = th.MaNH
+               AND hs.MaToHop = th.MaToHop
+            GROUP BY nam.MaSoNH, th.MaToHop, th.KyHieu
+        ),
+        lop_da_chuan_bi AS (
+            SELECT
+                lop.MaToHop,
+                COUNT(*) AS SoLopDaChuanBi,
+                SUM(lop.SiSoToiDa) AS TongSucChua
+            FROM nam_dang_xet nam
+            JOIN lop_hoc lop ON lop.MaNH = nam.MaNH
+            JOIN khoi_lop khoi ON khoi.MaKhoi = lop.MaKhoi
+            WHERE khoi.SoKhoi = 10
+              AND lop.TrangThai = 'HOAT_DONG'
+              AND lop.MaToHop IS NOT NULL
+              AND lop.SiSoToiDa > 0
+              AND lop.ThuTuXep > 0
+              AND NOT EXISTS (
+                  SELECT 1
+                  FROM xep_lop xl
+                  WHERE xl.MaLop = lop.MaLop
+              )
+            GROUP BY lop.MaToHop
+        ),
+        de_xuat AS (
+            SELECT
+                nc.MaSoNH,
+                nc.MaToHop,
+                nc.KyHieu,
+                nc.TongNguyenVong,
+                COALESCE(lop.SoLopDaChuanBi, 0) AS SoLopDaChuanBi,
+                COALESCE(lop.TongSucChua, 0) AS TongSucChua,
+                GREATEST(
+                    0,
+                    CAST(nc.TongNguyenVong AS SIGNED)
+                        - COALESCE(lop.TongSucChua, 0)
+                ) AS SoChoConThieu
+            FROM nhu_cau nc
+            LEFT JOIN lop_da_chuan_bi lop ON lop.MaToHop = nc.MaToHop
+        )
+        SELECT
+            MaSoNH AS NamHoc,
+            MaToHop,
+            KyHieu,
+            TongNguyenVong,
+            SoLopDaChuanBi,
+            TongSucChua,
+            SoChoConThieu,
+            (SoChoConThieu + ? - 1) DIV ? AS SoLopCanMoThem
+        FROM de_xuat
+        ORDER BY KyHieu
+        """;
+        return jdbcTemplate.query(
+                sql,
+                (rs, rowNum) -> new Grade10ClassProposalResponse(
+                        rs.getLong("MaToHop"),
+                        rs.getString("KyHieu"),
+                        rs.getLong("TongNguyenVong"),
+                        rs.getLong("SoLopDaChuanBi"),
+                        rs.getLong("TongSucChua"),
+                        rs.getLong("SoChoConThieu"),
+                        rs.getLong("SoLopCanMoThem")
+                ),
+                maNamHoc,
+                homNay,
+                chiTieuLopMoi,
+                chiTieuLopMoi
+        );
+    }
+
+    // Khóa dòng năm học để các lần xác nhận mở lớp hoặc chốt xếp lớp cùng năm được xử lý lần lượt.
+    @Override
+    public Optional<LocalDate> khoaNamHocDeMoLop(Long maNamHoc) {
+        String sql = """
+            SELECT NgayKetThuc
+            FROM nam_hoc
+            WHERE MaNH = ?
+            FOR UPDATE
+            """;
+
+        return jdbcTemplate.query(
+                sql,
+                (rs, rowNum) -> rs.getObject("NgayKetThuc", LocalDate.class),
+                maNamHoc
+        ).stream().findFirst();
+    }
+
+    // Tìm lớp cùng tên trong đúng năm học để kiểm tra khả năng dùng lại khi xác nhận mở lớp.
+    @Override
+    public Optional<SchoolClass> timLopTheoNamVaTen(Long maNamHoc, String tenLop) {
+        String sql = """
+            SELECT MaLop, MaNH, MaKhoi, TenLop, TrangThai,
+                   MaToHop, SiSoToiDa, ThuTuXep
+            FROM lop_hoc
+            WHERE MaNH = ?
+              AND TenLop = ?
+            FOR UPDATE
+            """;
+
+        return jdbcTemplate.query(
+                sql,
+                LOP_ROW_MAPPER,
+                maNamHoc,
+                tenLop
+        ).stream().findFirst();
+    }
+
+    // Chọn các lớp 10 đang hoạt động, có cấu hình hợp lệ và chưa có bản ghi xếp lớp, theo thứ tự xếp trong tổ hợp.
+    @Override
+    public List<SchoolClass> danhSachLop10DeXepDauNam(Long maNamHoc){
+      String sql = """
+              SELECT lop.MaLop,
+              lop.MaNH,
+              lop.MaKhoi,
+              lop.TenLop,
+              lop.TrangThai,
+              lop.MaToHop,
+              lop.SiSoToiDa,
+              lop.ThuTuXep
+              FROM lop_hoc lop
+              JOIN khoi_lop khoi ON khoi.MaKhoi = lop.MaKhoi
+              JOIN to_hop_mon th ON th.MaNH = lop.MaNH AND th.MaToHop = lop.MaToHop
+              WHERE lop.MaNH = ?
+              AND khoi.SoKhoi = 10
+                AND lop.TrangThai = 'HOAT_DONG'
+                AND lop.SiSoToiDa > 0
+                AND lop.ThuTuXep > 0
+                AND NOT EXISTS (
+                    SELECT 1
+                    FROM xep_lop xl
+                    WHERE xl.MaLop = lop.MaLop
+                )
+              ORDER BY th.KyHieu, lop.ThuTuXep
+              """;
+        return jdbcTemplate.query(
+                sql,
+                LOP_ROW_MAPPER,
+                maNamHoc
+        );
+    }
 }

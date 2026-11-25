@@ -56,9 +56,15 @@ public class GlobalExceptionHandler {
                         .build());
     }
 
+    @ExceptionHandler(InvalidRequestException.class)
+    public ResponseEntity<ApiResponse<Void>> handlingInvalidRequest(InvalidRequestException ex) {
+        return ResponseEntity.badRequest().body(ApiResponse.<Void>builder()
+                .code(ErrorCode.INVALID_KEY.getCode()).message(ex.getMessage()).build());
+    }
+
     @ExceptionHandler(BusinessException.class)
     public ResponseEntity<ApiResponse<Void>> handlingBusinessException(BusinessException ex) {
-        return ResponseEntity.badRequest()
+        return ResponseEntity.status(HttpStatus.CONFLICT)
                 .body(ApiResponse.<Void>builder()
                         .code(ErrorCode.INVALID_KEY.getCode())
                         .message(ex.getMessage())

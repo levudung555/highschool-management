@@ -1,7 +1,7 @@
 package com.example.highschool_management.service;
 
 import com.example.highschool_management.dao.AttendanceDao;
-import com.example.highschool_management.dao.AuthDao;
+import com.example.highschool_management.dao.UserDao;
 import com.example.highschool_management.dao.SchoolClassDao;
 import com.example.highschool_management.dto.request.AttendanceItemRequest;
 import com.example.highschool_management.dto.request.CreateAttendanceSessionRequest;
@@ -47,7 +47,7 @@ class AttendanceServiceTest {
     @Mock
     private SchoolClassDao schoolClassDao;
     @Mock
-    private AuthDao authDao;
+    private UserDao userDao;
     @Mock
     private NguoiDungHienTai nguoiDungHienTai;
 
@@ -59,9 +59,9 @@ class AttendanceServiceTest {
     @BeforeEach
     void setUp() {
         fixedClock = Clock.fixed(Instant.parse("2026-11-18T10:00:00Z"), ZoneId.of("Asia/Ho_Chi_Minh"));
-        attendanceService = new AttendanceServiceImpl(attendanceDao, schoolClassDao, authDao, nguoiDungHienTai, fixedClock);
+        attendanceService = new AttendanceServiceImpl(attendanceDao, schoolClassDao, userDao, nguoiDungHienTai, fixedClock);
         when(nguoiDungHienTai.yeuCauVaiTro(any(String[].class))).thenReturn(2L);
-        when(authDao.vaiTro(2L)).thenReturn(List.of("GIAO_VU"));
+        when(userDao.findRoleNames(2L)).thenReturn(List.of("GIAO_VU"));
     }
 
     private SchoolClass mockLop(Long maLop, String tenLop, String trangThai) {
@@ -78,7 +78,7 @@ class AttendanceServiceTest {
     @DisplayName("1. Lấy danh sách học sinh theo lớp và ngày - Mặc định CO_MAT khi chưa có phiên")
     void testLayDanhSachHocSinh_MacDinhCoMat() {
         when(nguoiDungHienTai.yeuCauVaiTro(any())).thenReturn(2L);
-        when(authDao.vaiTro(2L)).thenReturn(List.of("GIAO_VU"));
+        when(userDao.findRoleNames(2L)).thenReturn(List.of("GIAO_VU"));
         when(schoolClassDao.findById(1L)).thenReturn(Optional.of(mockLop(1L, "10A1", "HOAT_DONG")));
         when(attendanceDao.timPhienDiemDanh(1L, today, "BUOI", "SANG")).thenReturn(Optional.empty());
         when(attendanceDao.timHocKyTheoNgayVaLop(1L, today)).thenReturn(Optional.of(10L));
@@ -101,7 +101,7 @@ class AttendanceServiceTest {
     @DisplayName("2. Tạo phiên điểm danh thành công với transaction lưu chi tiết")
     void testTaoPhienDiemDanh_ThanhCong() {
         when(nguoiDungHienTai.yeuCauVaiTro(any())).thenReturn(2L);
-        when(authDao.vaiTro(2L)).thenReturn(List.of("GIAO_VU"));
+        when(userDao.findRoleNames(2L)).thenReturn(List.of("GIAO_VU"));
         when(schoolClassDao.findById(1L)).thenReturn(Optional.of(mockLop(1L, "10A1", "HOAT_DONG")));
         when(attendanceDao.timPhienDiemDanh(1L, today, "BUOI", "SANG")).thenReturn(Optional.empty());
         when(attendanceDao.timHocKyTheoNgayVaLop(1L, today)).thenReturn(Optional.of(10L));
@@ -140,7 +140,7 @@ class AttendanceServiceTest {
     @DisplayName("3. Cập nhật phiên điểm danh thành công")
     void testCapNhatPhienDiemDanh_ThanhCong() {
         when(nguoiDungHienTai.yeuCauVaiTro(any())).thenReturn(2L);
-        when(authDao.vaiTro(2L)).thenReturn(List.of("ADMIN"));
+        when(userDao.findRoleNames(2L)).thenReturn(List.of("ADMIN"));
 
         AttendanceSession session = AttendanceSession.builder()
                 .maPDD(500L).maLop(1L).ngay(today).phamVi("BUOI").maKhung("SANG").trangThai("DANG_NHAP").maTKTao(2L).build();
@@ -166,7 +166,7 @@ class AttendanceServiceTest {
     @DisplayName("4. Từ chối khi giáo viên không được phân công chủ nhiệm hay bộ môn")
     void testGiaoVienKhongCoQuyen_TuChoi() {
         when(nguoiDungHienTai.yeuCauVaiTro(any(String[].class))).thenReturn(10L);
-        when(authDao.vaiTro(10L)).thenReturn(List.of("GIAO_VIEN"));
+        when(userDao.findRoleNames(10L)).thenReturn(List.of("GIAO_VIEN"));
         when(attendanceDao.timMaGiaoVienTheoMaTK(10L)).thenReturn(Optional.of(99L));
         when(attendanceDao.laChuNhiemLop(99L, 1L, today)).thenReturn(false);
         when(attendanceDao.laGiaoVienBoMon(99L, 1L, null, today)).thenReturn(false);
@@ -192,7 +192,7 @@ class AttendanceServiceTest {
     @DisplayName("6. Từ chối tạo phiên trùng lặp")
     void testTaoPhienDiemDanh_TrungLap_BaoLoi() {
         when(nguoiDungHienTai.yeuCauVaiTro(any())).thenReturn(2L);
-        when(authDao.vaiTro(2L)).thenReturn(List.of("GIAO_VU"));
+        when(userDao.findRoleNames(2L)).thenReturn(List.of("GIAO_VU"));
         when(schoolClassDao.findById(1L)).thenReturn(Optional.of(mockLop(1L, "10A1", "HOAT_DONG")));
 
         AttendanceSession daCo = AttendanceSession.builder().maPDD(500L).build();
@@ -210,7 +210,7 @@ class AttendanceServiceTest {
     @DisplayName("7. Từ chối điểm danh học sinh không thuộc lớp tại ngày chọn")
     void testHocSinhKhongThuocLop_TuChoi() {
         when(nguoiDungHienTai.yeuCauVaiTro(any())).thenReturn(2L);
-        when(authDao.vaiTro(2L)).thenReturn(List.of("GIAO_VU"));
+        when(userDao.findRoleNames(2L)).thenReturn(List.of("GIAO_VU"));
         when(schoolClassDao.findById(1L)).thenReturn(Optional.of(mockLop(1L, "10A1", "HOAT_DONG")));
         when(attendanceDao.timPhienDiemDanh(1L, today, "BUOI", "SANG")).thenReturn(Optional.empty());
         when(attendanceDao.timHocKyTheoNgayVaLop(1L, today)).thenReturn(Optional.of(10L));
@@ -233,7 +233,7 @@ class AttendanceServiceTest {
     @DisplayName("8. Từ chối khi ghi chú vượt quá 255 ký tự")
     void testGhiChuQua255KyTu_TuChoi() {
         when(nguoiDungHienTai.yeuCauVaiTro(any())).thenReturn(2L);
-        when(authDao.vaiTro(2L)).thenReturn(List.of("GIAO_VU"));
+        when(userDao.findRoleNames(2L)).thenReturn(List.of("GIAO_VU"));
         when(schoolClassDao.findById(1L)).thenReturn(Optional.of(mockLop(1L, "10A1", "HOAT_DONG")));
         when(attendanceDao.timPhienDiemDanh(1L, today, "BUOI", "SANG")).thenReturn(Optional.empty());
         when(attendanceDao.timHocKyTheoNgayVaLop(1L, today)).thenReturn(Optional.of(10L));
@@ -270,7 +270,7 @@ class AttendanceServiceTest {
     @DisplayName("10. Từ chối khi lớp không có học sinh tại ngày điểm danh")
     void testLopKhongCoHocSinh_TuChoi() {
         when(nguoiDungHienTai.yeuCauVaiTro(any())).thenReturn(2L);
-        when(authDao.vaiTro(2L)).thenReturn(List.of("GIAO_VU"));
+        when(userDao.findRoleNames(2L)).thenReturn(List.of("GIAO_VU"));
         when(schoolClassDao.findById(1L)).thenReturn(Optional.of(mockLop(1L, "10A1", "HOAT_DONG")));
         when(attendanceDao.timPhienDiemDanh(1L, today, "BUOI", "SANG")).thenReturn(Optional.empty());
         when(attendanceDao.timHocKyTheoNgayVaLop(1L, today)).thenReturn(Optional.of(10L));

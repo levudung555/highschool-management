@@ -13,4 +13,5 @@ public record EnrollmentResponse(
     Long maTKNguoiThucHien,
     LocalDateTime thoiDiemThucHien,
     Long maXepLopNguon,
-    String lyDoChuyen, Long maHoSoNhapHoc) {}
+    String lyDoChuyen, Long maHoSoNhapHoc, String hoTen, String maSoHocSinh,
+    String tenLop, String namHoc, String tenNguoiThucHien) {}

@@ -14,9 +14,10 @@ public class EnrollmentMapper {
         e.getTuNgay(),
         e.getDenNgay(),
         e.getLyDoKetThuc(),
-        e.getMaTKNguoiThucHien(),
+        e.getMaTaiKhoanThucHien(),
         e.getThoiDiemThucHien(),
         e.getMaXepLopNguon(),
-        e.getLyDoChuyen(), e.getMaHoSoNhapHoc());
+        e.getLyDoChuyen(), e.getMaHoSoNhapHoc(), e.getHoTen(), e.getMaSoHocSinh(),
+        e.getTenLop(), e.getNamHoc(), e.getTenNguoiThucHien());
   }
 }

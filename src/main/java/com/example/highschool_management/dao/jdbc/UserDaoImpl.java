@@ -10,12 +10,34 @@ import java.sql.ResultSet;
 import java.sql.Statement;
 import java.sql.Types;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Optional;
+import org.springframework.jdbc.core.JdbcTemplate;
 import java.util.Set;
 import org.springframework.stereotype.Repository;
 
 @Repository
 public class UserDaoImpl implements UserDao {
+    private final JdbcTemplate jdbc;
+
+    public UserDaoImpl(JdbcTemplate jdbc) {
+        this.jdbc = jdbc;
+    }
+
+    @Override
+    public List<String> findRoleNames(long id) {
+        return jdbc.queryForList("""
+            SELECT v.MaSoVaiTro FROM tai_khoan_vai_tro tv
+            JOIN vai_tro v ON v.MaVT = tv.MaVT WHERE tv.MaTK = ?
+            """, String.class, id);
+    }
+
+    @Override
+    public Optional<String> findFullName(long id) {
+        return jdbc.queryForList("SELECT HoTen FROM tai_khoan WHERE MaTK = ?", String.class, id)
+                .stream().findFirst();
+    }
+
 
     @Override
     public Optional<User> findByUsername(String username) {

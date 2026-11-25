@@ -6,6 +6,9 @@ import com.example.highschool_management.model.StudentGuardian;
 import com.example.highschool_management.utils.JdbcConnect;
 import org.springframework.stereotype.Repository;
 
+import com.example.highschool_management.dto.response.StudentOfGuardianResponse;
+import com.example.highschool_management.enums.SexEnum;
+import java.time.LocalDate;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
@@ -69,7 +72,7 @@ public class StudentGuardianDaoImpl implements StudentGuardianDao {
     @Override
     public List<GuardianResponse> findGuardiansByMaHS(Long maHS) {
         String sql = """
-            SELECT g.MaNGH, g.HoTen, g.SoDienThoai, g.Email, g.DiaChi,
+            SELECT g.MaNGH, g.HoTen, g.SoDienThoai, g.DiaChi,
                    sg.MoiQuanHe, sg.LienHeChinh
             FROM nguoi_giam_ho g
             INNER JOIN hs_nguoi_giam_ho sg ON g.MaNGH = sg.MaNGH
@@ -133,6 +136,96 @@ public class StudentGuardianDaoImpl implements StudentGuardianDao {
             return ps.executeUpdate() > 0;
         } catch (Exception e) {
             throw new RuntimeException("Lỗi khi xóa liên kết theo mã học sinh", e);
+        }
+    }
+
+@Override
+    public List<StudentOfGuardianResponse> findStudentsByMaNGH(Long maNGH) {
+        String sql = """
+            SELECT h.MaHS, h.MaSoHS, h.HoTen, h.NgaySinh, h.GioiTinh, h.DiaChi, h.SoDienThoai,
+                   sg.MoiQuanHe, sg.LienHeChinh
+            FROM hoc_sinh h
+            INNER JOIN hs_nguoi_giam_ho sg ON h.MaHS = sg.MaHS
+            WHERE sg.MaNGH = ?
+            ORDER BY h.HoTen ASC
+            """;
+        List<StudentOfGuardianResponse> list = new ArrayList<>();
+        try (Connection conn = JdbcConnect.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setLong(1, maNGH);
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    StudentOfGuardianResponse res = StudentOfGuardianResponse.builder()
+                            .maHS(rs.getLong("MaHS"))
+                            .maSoHS(rs.getString("MaSoHS"))
+                            .hoTen(rs.getString("HoTen"))
+                            .ngaySinh(rs.getObject("NgaySinh", LocalDate.class))
+                            .gioiTinh(SexEnum.valueOf(rs.getString("GioiTinh")))
+                            .diaChi(rs.getString("DiaChi"))
+                            .sdt(rs.getString("SoDienThoai"))
+                            .moiQuanHe(rs.getString("MoiQuanHe"))
+                            .lienHeChinh(rs.getInt("LienHeChinh") == 1)
+                            .build();
+                    list.add(res);
+                }
+            }
+            return list;
+        } catch (Exception e) {
+            throw new RuntimeException("Lỗi khi tìm danh sách học sinh của người giám hộ", e);
+        }
+    }
+
+    @Override
+    public boolean existsAnyStudentLinked(Long maNGH) {
+        String sql = "SELECT EXISTS(SELECT 1 FROM hs_nguoi_giam_ho WHERE MaNGH = ?)";
+        try (Connection conn = JdbcConnect.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setLong(1, maNGH);
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) {
+                    return rs.getBoolean(1);
+                }
+            }
+        } catch (Exception e) {
+            throw new RuntimeException("Lỗi khi kiểm tra học sinh liên kết với người giám hộ", e);
+        }
+        return false;
+    }
+
+    @Override
+    public void resetLienHeChinh(Long maHS) {
+        String sql = "UPDATE hs_nguoi_giam_ho SET LienHeChinh = 0 WHERE MaHS = ?";
+        try (Connection conn = JdbcConnect.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setLong(1, maHS);
+            ps.executeUpdate();
+        } catch (Exception e) {
+            throw new RuntimeException("Lỗi khi cập nhật người liên hệ chính", e);
+        }
+    }
+
+    @Override
+    public List<Long> findGuardianIdsByMaHSs(List<Long> maHSs) {
+        if (maHSs == null || maHSs.isEmpty()) {
+            return Collections.emptyList();
+        }
+        String sql = "SELECT DISTINCT MaNGH FROM hs_nguoi_giam_ho WHERE MaHS IN ("
+                + String.join(",", Collections.nCopies(maHSs.size(), "?"))
+                + ")";
+        List<Long> list = new ArrayList<>();
+        try (Connection conn = JdbcConnect.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            for (int i = 0; i < maHSs.size(); i++) {
+                ps.setLong(i + 1, maHSs.get(i));
+            }
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    list.add(rs.getLong("MaNGH"));
+                }
+            }
+            return list;
+        } catch (Exception e) {
+            throw new RuntimeException("Lỗi khi lấy danh sách mã người giám hộ theo mã học sinh", e);
         }
     }
 }

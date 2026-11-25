@@ -23,13 +23,14 @@ import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilde
 
 @SpringBootTest(
     properties = {
+      "app.seed.enabled=false",
       "spring.datasource.url=jdbc:h2:mem:uc09;MODE=MySQL;DB_CLOSE_DELAY=-1;LOCK_TIMEOUT=5000",
       "spring.datasource.driver-class-name=org.h2.Driver",
       "spring.datasource.username=sa",
       "spring.datasource.password="
     })
 @AutoConfigureMockMvc
-@Sql("/uc09-schema.sql")
+@Sql({"/uc09-schema.sql", "/enrollment-fixture.sql"})
 class EnrollmentIntegrationTest {
   @Autowired MockMvc mvc;
   @Autowired JdbcTemplate jdbc;
@@ -50,21 +51,21 @@ class EnrollmentIntegrationTest {
   private String token(String user) throws Exception {
     var result =
         mvc.perform(
-                post("/api/v1/auth/login")
+                post("/auth/token")
                     .contentType("application/json")
-                    .content("{\"tenDangNhap\":\"" + user + "\",\"matKhau\":\"Test@12345\"}"))
+                    .content("{\"username\":\"" + user + "\",\"password\":\"Test@12345\"}"))
             .andExpect(status().isOk())
             .andReturn();
     return com.jayway.jsonpath.JsonPath.read(
-        result.getResponse().getContentAsString(), "$.accessToken");
+        result.getResponse().getContentAsString(), "$.result.token");
   }
 
   private MvcResult send(MockHttpServletRequestBuilder req, String user) throws Exception {
     if ("locked".equals(user))
       return mvc.perform(
-              post("/api/v1/auth/login")
+              post("/auth/token")
                   .contentType("application/json")
-                  .content("{\"tenDangNhap\":\"locked\",\"matKhau\":\"Test@12345\"}"))
+                  .content("{\"username\":\"locked\",\"password\":\"Test@12345\"}"))
           .andReturn();
     if (user != null) {
       if (!tokens.containsKey(user)) tokens.put(user, token(user));
@@ -95,25 +96,25 @@ class EnrollmentIntegrationTest {
     long id = create(1,1,"2026-11-04");
     assertEquals(2L,dao.timTheoMa(id).orElseThrow().getMaTaiKhoanThucHien());
     assertNull(dao.timTheoMa(id).orElseThrow().getDenNgay());
-    assertEquals(1,dao.demSiSo(1L,LocalDate.of(2026,11,4)));
-    assertEquals(0,dao.demSiSo(1L,LocalDate.of(2026,11,3)));
+    assertEquals(1,dao.demDanhSachLop(1L,LocalDate.of(2026,11,4)));
+    assertEquals(0,dao.demDanhSachLop(1L,LocalDate.of(2026,11,3)));
   }
 
   @Test void duplicateInSameYearIsRejectedButNextYearIsAllowed() throws Exception {
     create(1,1,"2026-11-04");
     assertEquals(409,send(enroll(1,2,"2026-11-05"),"giaovu").getResponse().getStatus());
     create(1,4,"2027-09-01");
-    assertEquals(0,dao.demSiSo(1L,LocalDate.of(2027,9,1)));
+    assertEquals(0,dao.demDanhSachLop(1L,LocalDate.of(2027,9,1)));
   }
 
   @Test void futureTransferPreservesOldClassUntilPreviousDay() throws Exception {
     long source=create(1,1,"2026-11-04");
     assertEquals(201,send(transfer(source,2,"2026-11-15"),"giaovu").getResponse().getStatus());
     assertEquals(LocalDate.of(2026,11,14),dao.timTheoMa(source).orElseThrow().getDenNgay());
-    assertEquals(1,dao.demSiSo(1L,LocalDate.of(2026,11,14)));
-    assertEquals(0,dao.demSiSo(2L,LocalDate.of(2026,11,14)));
-    assertEquals(0,dao.demSiSo(1L,LocalDate.of(2026,11,15)));
-    assertEquals(1,dao.demSiSo(2L,LocalDate.of(2026,11,15)));
+    assertEquals(1,dao.demDanhSachLop(1L,LocalDate.of(2026,11,14)));
+    assertEquals(0,dao.demDanhSachLop(2L,LocalDate.of(2026,11,14)));
+    assertEquals(0,dao.demDanhSachLop(1L,LocalDate.of(2026,11,15)));
+    assertEquals(1,dao.demDanhSachLop(2L,LocalDate.of(2026,11,15)));
     assertEquals(1,jdbc.queryForObject("SELECT COUNT(*) FROM nhat_ky_he_thong",Integer.class));
     assertEquals("Chuyen theo nguyen vong",dao.timTheoMa(source).orElseThrow().getLyDoKetThuc());
   }
@@ -162,7 +163,7 @@ class EnrollmentIntegrationTest {
     long source=create(1,1,"2026-11-04");
     doThrow(new IllegalStateException("forced insert failure")).when(dao).tao(any());
     try {
-      assertThrows(Exception.class, () -> send(transfer(source,2,"2026-11-05"),"giaovu"));
+      assertEquals(500, send(transfer(source,2,"2026-11-05"),"giaovu").getResponse().getStatus());
     } finally { reset(dao); }
     assertNull(dao.timTheoMa(source).orElseThrow().getDenNgay());
     assertEquals(1,dao.lichSu(1L).size());
@@ -212,7 +213,7 @@ class EnrollmentIntegrationTest {
     long source=create(1,1,"2026-11-04");
     doThrow(new IllegalStateException("forced audit failure")).when(dao)
       .ghiNhatKyChuyenLop(anyLong(),anyLong(),anyLong(),any(),anyString(),any());
-    try { assertThrows(Exception.class, () -> send(transfer(source,2,"2026-11-05"),"giaovu")); }
+    try { assertEquals(500, send(transfer(source,2,"2026-11-05"),"giaovu").getResponse().getStatus()); }
     finally { reset(dao); }
     assertNull(dao.timTheoMa(source).orElseThrow().getDenNgay());
     assertEquals(1,dao.lichSu(1L).size());

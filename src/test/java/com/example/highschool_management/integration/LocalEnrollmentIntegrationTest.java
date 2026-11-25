@@ -13,6 +13,7 @@ import org.springframework.test.web.servlet.MockMvc;
 
 @SpringBootTest(
     properties = {
+      "app.seed.enabled=false",
       "spring.datasource.url=jdbc:h2:mem:uc09local;MODE=MySQL;DB_CLOSE_DELAY=-1",
       "spring.datasource.driver-class-name=org.h2.Driver",
       "spring.datasource.username=sa",
@@ -21,7 +22,7 @@ import org.springframework.test.web.servlet.MockMvc;
     })
 @ActiveProfiles("local")
 @AutoConfigureMockMvc
-@Sql("/uc09-schema.sql")
+@Sql({"/uc09-schema.sql", "/enrollment-fixture.sql"})
 class LocalEnrollmentIntegrationTest {
   @org.springframework.boot.test.context.TestConfiguration
   static class Time {
@@ -42,14 +43,14 @@ class LocalEnrollmentIntegrationTest {
     if (token == null) {
       var login =
           mvc.perform(
-                  post("/api/v1/auth/login")
+                  post("/auth/token")
                       .contentType("application/json")
-                      .content("{\"tenDangNhap\":\"bgh\",\"matKhau\":\"Test@12345\"}"))
+                      .content("{\"username\":\"bgh\",\"password\":\"Test@12345\"}"))
               .andExpect(status().isOk())
               .andReturn();
       token =
           com.jayway.jsonpath.JsonPath.read(
-              login.getResponse().getContentAsString(), "$.accessToken");
+              login.getResponse().getContentAsString(), "$.result.token");
     }
     return mvc.perform(request.header("Authorization", "Bearer " + token));
   }
@@ -63,7 +64,7 @@ class LocalEnrollmentIntegrationTest {
                 .contentType("application/json")
                 .content("{\"maHocSinh\":1,\"maLop\":1,\"tuNgay\":\"" + start + "\"}"))
             .andExpect(status().isCreated())
-            .andExpect(jsonPath("$.maTaiKhoanThucHien").value(1))
+            .andExpect(jsonPath("$.maTKNguoiThucHien").value(1))
             .andExpect(jsonPath("$.trangThaiDuyet").doesNotExist())
             .andReturn().getResponse();
     auth(get(response.getHeader("Location"))).andExpect(status().isOk());

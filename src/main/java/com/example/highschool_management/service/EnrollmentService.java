@@ -18,4 +18,7 @@ public interface EnrollmentService {
     PageResponse<ClassStudentResponse> danhSachLop(Long maLop, LocalDate ngay, int trang, int kichThuoc);
     EnrollmentResponse chiTiet(Long maXepLop);
     List<EnrollmentResponse> lichSu(Long maHocSinh);
+
+PageResponse<EnrollmentStudentResponse> timHocSinh(String tuKhoa, Long year, int trang, int kichThuoc);
+  PageResponse<EnrollmentRequestResponse> timYeuCau(String tuKhoa, Long year, int trang, int kichThuoc);
 }

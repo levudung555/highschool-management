@@ -3,21 +3,30 @@ package com.example.highschool_management.model;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 
+
 @lombok.Getter
 @lombok.Setter
 public class Enrollment {
-  private Long maHoSoNhapHoc;
-
+  private Long maXepLopNguon;
+  private String lyDoChuyen;
   private Long maXepLop;
   private Long maHocSinh;
   private Long maLop;
   private LocalDate tuNgay;
+  // Ngày cuối còn thuộc lớp (bao gồm ngày này); null là chưa kết thúc.
   private LocalDate denNgay;
   private String lyDoKetThuc;
-  private Long maTKNguoiThucHien;
+  private Long maTaiKhoanThucHien;
   private LocalDateTime thoiDiemThucHien;
-  private Long maXepLopNguon;
-  private String lyDoChuyen;
+  private Long maHoSoNhapHoc;
+
+  public Long getMaHoSoNhapHoc() {
+    return maHoSoNhapHoc;
+  }
+
+  public void setMaHoSoNhapHoc(Long maHoSoNhapHoc) {
+    this.maHoSoNhapHoc = maHoSoNhapHoc;
+  }
 
   public Long getMaXepLop() {
     return maXepLop;
@@ -67,12 +76,12 @@ public class Enrollment {
     this.lyDoKetThuc = lyDoKetThuc;
   }
 
-  public Long getMaTKNguoiThucHien() {
-    return maTKNguoiThucHien;
+  public Long getMaTaiKhoanThucHien() {
+    return maTaiKhoanThucHien;
   }
 
-  public void setMaTKNguoiThucHien(Long maTKNguoiThucHien) {
-    this.maTKNguoiThucHien = maTKNguoiThucHien;
+  public void setMaTaiKhoanThucHien(Long maTaiKhoanThucHien) {
+    this.maTaiKhoanThucHien = maTaiKhoanThucHien;
   }
 
   public LocalDateTime getThoiDiemThucHien() {
@@ -83,19 +92,23 @@ public class Enrollment {
     this.thoiDiemThucHien = thoiDiemThucHien;
   }
 
-  public Long getMaXepLopNguon() {
-    return maXepLopNguon;
-  }
+  private String hoTen;
+  public String getHoTen() { return hoTen; }
+  public void setHoTen(String hoTen) { this.hoTen = hoTen; }
 
-  public void setMaXepLopNguon(Long maXepLopNguon) {
-    this.maXepLopNguon = maXepLopNguon;
-  }
+  private String maSoHocSinh;
+  public String getMaSoHocSinh() { return maSoHocSinh; }
+  public void setMaSoHocSinh(String maSoHocSinh) { this.maSoHocSinh = maSoHocSinh; }
 
-  public String getLyDoChuyen() {
-    return lyDoChuyen;
-  }
+  private String tenLop;
+  public String getTenLop() { return tenLop; }
+  public void setTenLop(String tenLop) { this.tenLop = tenLop; }
 
-  public void setLyDoChuyen(String lyDoChuyen) {
-    this.lyDoChuyen = lyDoChuyen;
-  }
+  private String namHoc;
+  public String getNamHoc() { return namHoc; }
+  public void setNamHoc(String namHoc) { this.namHoc = namHoc; }
+
+  private String tenNguoiThucHien;
+  public String getTenNguoiThucHien() { return tenNguoiThucHien; }
+  public void setTenNguoiThucHien(String tenNguoiThucHien) { this.tenNguoiThucHien = tenNguoiThucHien; }
 }

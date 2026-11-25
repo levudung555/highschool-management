@@ -3,7 +3,6 @@ package com.example.highschool_management.integration;
 import com.example.highschool_management.dto.request.AttendanceItemRequest;
 import com.example.highschool_management.dto.request.CreateAttendanceSessionRequest;
 import com.example.highschool_management.dto.request.UpdateAttendanceSessionRequest;
-import com.example.highschool_management.security.SchoolSecurityConfig;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -24,6 +23,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 @SpringBootTest(
     properties = {
+      "app.seed.enabled=false",
       "spring.datasource.url=jdbc:h2:mem:attendance;MODE=MySQL;DB_CLOSE_DELAY=-1",
       "spring.datasource.driver-class-name=org.h2.Driver",
       "spring.datasource.username=sa",
@@ -157,12 +157,12 @@ class AttendanceIntegrationTest {
         jdbc.execute("DELETE FROM nhat_ky_he_thong;");
 
         // Login với user giaovu (vai trò GIAO_VU)
-        var result = mvc.perform(post("/api/v1/auth/login")
+        var result = mvc.perform(post("/auth/token")
                 .contentType("application/json")
-                .content("{\"tenDangNhap\":\"giaovu\",\"matKhau\":\"Test@12345\"}"))
+                .content("{\"username\":\"giaovu\",\"password\":\"Test@12345\"}"))
                 .andExpect(status().isOk())
                 .andReturn();
-        token = com.jayway.jsonpath.JsonPath.read(result.getResponse().getContentAsString(), "$.accessToken");
+        token = com.jayway.jsonpath.JsonPath.read(result.getResponse().getContentAsString(), "$.result.token");
     }
 
     @Test

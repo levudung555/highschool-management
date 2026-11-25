@@ -674,6 +674,11 @@ $("enrollmentForm").addEventListener("submit", async (event) => {
       const transfer = $("enrollmentKind").value === "transfer";
       const body = { maHocSinh: Number($("studentInput").value) };
       if (transfer) {
+        const history = await api(`/students/${body.maHocSinh}/enrollments`);
+        const source = history.find(entry => entry.denNgay == null);
+        if (!source) throw new Error("Học sinh chưa có phân lớp hiện tại.");
+        body.maXepLopHienTai = source.maXepLop;
+        delete body.maHocSinh;
         body.maLopDich = Number($("enrollmentClassInput").value);
         body.ngayChuyen = $("enrollmentDateInput").value;
         body.lyDo = $("transferReasonInput").value.trim();

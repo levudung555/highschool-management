@@ -142,9 +142,9 @@ INSERT INTO vai_tro (MaVT, MaSoVaiTro, TenVaiTro) VALUES
 (4, 'GIAO_VIEN', 'Giáo Viên');
 
 INSERT INTO tai_khoan (MaTK, TenDangNhap, MatKhauBam, HoTen, TrangThai) VALUES
-(1, 'bgh', '$2a$10$0ns4v7JclyWzwijc48x/yuzjGvfgS1x6xapRWO6vSyqkBGNdKUJiS', 'Ban Giám Hiệu', 'HOAT_DONG'),
-(2, 'giaovu', '$2a$10$0ns4v7JclyWzwijc48x/yuzjGvfgS1x6xapRWO6vSyqkBGNdKUJiS', 'Giáo Vụ', 'HOAT_DONG'),
-(3, 'locked', '$2a$10$0ns4v7JclyWzwijc48x/yuzjGvfgS1x6xapRWO6vSyqkBGNdKUJiS', 'Tài khoản khóa', 'BI_KHOA');
+(1, 'bgh', '$2a$10$lpqJd.gZUdWI0DibQcsMCONg3kJTTrvhEzrmhG/kBS/G2uJJyFMFe', 'Ban Giám Hiệu', 'HOAT_DONG'),
+(2, 'giaovu', '$2a$10$lpqJd.gZUdWI0DibQcsMCONg3kJTTrvhEzrmhG/kBS/G2uJJyFMFe', 'Giáo Vụ', 'HOAT_DONG'),
+(3, 'locked', '$2a$10$lpqJd.gZUdWI0DibQcsMCONg3kJTTrvhEzrmhG/kBS/G2uJJyFMFe', 'Tài khoản khóa', 'BI_KHOA');
 
 INSERT INTO tai_khoan_vai_tro (MaTK, MaVT) VALUES
 (1, 1),

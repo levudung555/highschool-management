@@ -16,6 +16,7 @@ import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilde
 
 @SpringBootTest(
     properties = {
+      "app.seed.enabled=false",
       "spring.datasource.url=jdbc:h2:mem:profiles;MODE=MySQL;DB_CLOSE_DELAY=-1",
       "spring.datasource.driver-class-name=org.h2.Driver",
       "spring.datasource.username=sa",
@@ -23,7 +24,7 @@ import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilde
       "spring.sql.init.mode=never"
     })
 @AutoConfigureMockMvc
-@Sql("/uc09-schema.sql")
+@Sql({"/uc09-schema.sql", "/enrollment-fixture.sql"})
 class ProfileIntegrationTest {
   @Autowired MockMvc mvc;
   @Autowired JdbcTemplate jdbc;
@@ -71,14 +72,14 @@ class ProfileIntegrationTest {
   private String token(String user) throws Exception {
     var response =
         mvc.perform(
-                post("/api/v1/auth/login")
+                post("/auth/token")
                     .contentType("application/json")
-                    .content("{\"tenDangNhap\":\"" + user + "\",\"matKhau\":\"Test@12345\"}"))
+                    .content("{\"username\":\"" + user + "\",\"password\":\"Test@12345\"}"))
             .andExpect(status().isOk())
             .andReturn()
             .getResponse()
             .getContentAsString();
-    return JsonPath.read(response, "$.accessToken");
+    return JsonPath.read(response, "$.result.token");
   }
 
   private MockHttpServletRequestBuilder auth(MockHttpServletRequestBuilder request)
@@ -89,7 +90,7 @@ class ProfileIntegrationTest {
   private String student(String name) {
     return "{\"hoTen\":\""
         + name
-        + "\",\"ngaySinh\":\"2010-02-03\",\"gioiTinh\":\"NU\",\"sdt\":\"0901234567\",\"email\":\"demo@example.com\"}";
+        + "\",\"ngaySinh\":\"2010-02-03\",\"gioiTinh\":\"NU\",\"sdt\":\"0901234567\",\"cmnd\":\"000000000010\",\"diemDauVao\":24.5}";
   }
 
   @Test
@@ -152,7 +153,6 @@ class ProfileIntegrationTest {
 
   @Test
   void filtersUseApprovedEffectiveEnrollmentsAndEndpointsEnforceRoles() throws Exception {
-    jdbc.update("UPDATE hoc_sinh SET NgayTiepNhan=NULL WHERE MaHS=1");
     mvc.perform(auth(get("/student"))).andExpect(status().isOk());
     jdbc.update(
         "INSERT INTO xep_lop(MaHS,MaLop,TuNgay,DenNgay,MaTKNguoiThucHien,ThoiDiemThucHien)"
@@ -162,7 +162,7 @@ class ProfileIntegrationTest {
         .andExpect(jsonPath("$.length()").value(1));
     mvc.perform(auth(get("/student/search?maLop=2"))).andExpect(jsonPath("$.length()").value(0));
     mvc.perform(get("/student")).andExpect(status().isUnauthorized());
-    mvc.perform(get("/teacher").header("Authorization", "Bearer " + token("gv")))
+    mvc.perform(delete("/teacher?maGV=1").header("Authorization", "Bearer " + token("gv")))
         .andExpect(status().isForbidden());
   }
 }

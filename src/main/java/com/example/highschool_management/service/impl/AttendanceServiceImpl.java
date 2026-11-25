@@ -1,7 +1,7 @@
 package com.example.highschool_management.service.impl;
 
 import com.example.highschool_management.dao.AttendanceDao;
-import com.example.highschool_management.dao.AuthDao;
+import com.example.highschool_management.dao.UserDao;
 import com.example.highschool_management.dao.SchoolClassDao;
 import com.example.highschool_management.dto.request.AttendanceItemRequest;
 import com.example.highschool_management.dto.request.CreateAttendanceSessionRequest;
@@ -16,7 +16,6 @@ import com.example.highschool_management.exception.ResourceNotFoundException;
 import com.example.highschool_management.model.AttendanceRecord;
 import com.example.highschool_management.model.AttendanceSession;
 import com.example.highschool_management.model.SchoolClass;
-import com.example.highschool_management.model.UserAccount;
 import com.example.highschool_management.security.NguoiDungHienTai;
 import com.example.highschool_management.service.AttendanceService;
 import org.springframework.stereotype.Service;
@@ -38,7 +37,7 @@ public class AttendanceServiceImpl implements AttendanceService {
 
     private final AttendanceDao attendanceDao;
     private final SchoolClassDao schoolClassDao;
-    private final AuthDao authDao;
+    private final UserDao userDao;
     private final NguoiDungHienTai nguoiDungHienTai;
     private final Clock clock;
 
@@ -47,12 +46,12 @@ public class AttendanceServiceImpl implements AttendanceService {
 
     public AttendanceServiceImpl(AttendanceDao attendanceDao,
                                  SchoolClassDao schoolClassDao,
-                                 AuthDao authDao,
+                                 UserDao userDao,
                                  NguoiDungHienTai nguoiDungHienTai,
                                  Clock clock) {
         this.attendanceDao = attendanceDao;
         this.schoolClassDao = schoolClassDao;
-        this.authDao = authDao;
+        this.userDao = userDao;
         this.nguoiDungHienTai = nguoiDungHienTai;
         this.clock = clock;
     }
@@ -63,7 +62,7 @@ public class AttendanceServiceImpl implements AttendanceService {
         long maTK = nguoiDungHienTai.yeuCauVaiTro("ADMIN", "BGH", "GIAO_VU", "GIAO_VIEN");
         LocalDate ngayTraCuu = (ngay != null) ? ngay : LocalDate.now(clock);
 
-        List<String> vaiTro = authDao.vaiTro(maTK);
+        List<String> vaiTro = userDao.findRoleNames(maTK);
         boolean laQuanTri = vaiTro.contains("ADMIN") || vaiTro.contains("BGH") || vaiTro.contains("GIAO_VU");
 
         if (laQuanTri) {
@@ -117,7 +116,7 @@ public class AttendanceServiceImpl implements AttendanceService {
             AttendanceSession phien = phienOpt.get();
             List<AttendanceStudentResponse> chiTiet = attendanceDao.layChiTietDiemDanhTheoPhien(phien.getMaPDD());
 
-            String nguoiTao = authDao.timTheoMa(phien.getMaTKTao()).map(UserAccount::hoTen).orElse("");
+            String nguoiTao = userDao.findFullName(phien.getMaTKTao()).orElse("");
             boolean daKhoa = "DA_CHOT".equalsIgnoreCase(phien.getTrangThai());
 
             return AttendanceSessionResponse.builder()
@@ -346,7 +345,7 @@ public class AttendanceServiceImpl implements AttendanceService {
     }
 
     private void kiemTraQuyenDiemDanh(Long maTK, Long maLop, Long maLMH, LocalDate ngay) {
-        List<String> vaiTro = authDao.vaiTro(maTK);
+        List<String> vaiTro = userDao.findRoleNames(maTK);
         boolean laQuanTri = vaiTro.contains("ADMIN") || vaiTro.contains("BGH") || vaiTro.contains("GIAO_VU");
         if (laQuanTri) {
             return;
