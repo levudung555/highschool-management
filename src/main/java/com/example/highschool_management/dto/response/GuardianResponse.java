@@ -11,7 +11,6 @@ public class GuardianResponse {
     Long maNGH;
     String hoTen;
     String sdt;
-    String email;
     String diaChi;
     String moiQuanHe;
     Boolean lienHeChinh;

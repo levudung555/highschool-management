@@ -11,7 +11,7 @@ public interface StudentDao {
 
   boolean existsSoDienThoai(String soDienThoai);
 
-  boolean existsEmail(String email);
+  boolean existsCCCD(String cccd);
 
   String getLastMaSoHS();
 

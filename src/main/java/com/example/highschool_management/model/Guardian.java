@@ -11,6 +11,5 @@ public class Guardian {
     Long maNGH;
     String hoTen;
     String sdt;
-    String email;
     String diaChi;
 }

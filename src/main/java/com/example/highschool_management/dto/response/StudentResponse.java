@@ -17,6 +17,5 @@ public class StudentResponse {
   SexEnum gioiTinh;
   String diaChi;
   String sdt;
-  String email;
   LocalDate ngayTiepNhan;
 }

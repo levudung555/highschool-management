@@ -5,12 +5,13 @@ import com.example.highschool_management.dto.request.UpdateTeacherRequest;
 import com.example.highschool_management.dto.response.TeacherResponse;
 import com.example.highschool_management.service.TeacherService;
 import jakarta.validation.Valid;
-import java.util.List;
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
 import lombok.experimental.FieldDefaults;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
 
 @RestController
 @RequestMapping("/teacher")
@@ -49,4 +50,6 @@ public class TeacherController {
     public List<TeacherResponse> getAllTeachers() {
         return teacherService.getAllTeachers();
     }
+
+
 }

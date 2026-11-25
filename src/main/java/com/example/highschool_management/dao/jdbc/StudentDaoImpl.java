@@ -20,8 +20,8 @@ public class StudentDaoImpl implements StudentDao {
   @Override
   public Student insertStudent(Student student) {
     String sql =
-        "INSERT INTO hoc_sinh (MaSoHS, HoTen, NgaySinh, GioiTinh, DiaChi, SoDienThoai, Email,"
-            + " NgayTiepNhan) VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
+        "INSERT INTO hoc_sinh (MaSoHS, HoTen, NgaySinh, GioiTinh, DiaChi, SoDienThoai,"
+            + " NgayTiepNhan, CMMD, DiemDauVao, NgayCapNhat) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)";
     try (Connection conn = JdbcConnect.getConnection();
         PreparedStatement ps = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
       ps.setString(1, student.getMaSoHS());
@@ -30,8 +30,9 @@ public class StudentDaoImpl implements StudentDao {
       ps.setString(4, student.getGioiTinh().toString());
       ps.setString(5, student.getDiaChi());
       ps.setString(6, student.getSdt());
-      ps.setString(7, student.getEmail());
-      ps.setDate(8, student.getNgayTiepNhan());
+      ps.setDate(7, student.getNgayTiepNhan());
+      ps.setString(8, student.getCmnd());
+      ps.setBigDecimal(9, student.getDiemDauVao());
       ps.executeUpdate();
       try (var rs = ps.getGeneratedKeys()) {
         if (rs.next()) {
@@ -63,21 +64,20 @@ public class StudentDaoImpl implements StudentDao {
   }
 
   @Override
-  public boolean existsEmail(String email) {
-    String sql = "SELECT EXISTS(SELECT 1 FROM hoc_sinh WHERE Email = ?)";
+  public boolean existsCCCD(String cccd) {
+    if (cccd == null || cccd.isBlank()) {
+      return false;
+    }
+    String sql = "SELECT EXISTS(SELECT 1 FROM hoc_sinh WHERE CMMD = ?)";
     try (Connection conn = JdbcConnect.getConnection();
         PreparedStatement ps = conn.prepareStatement(sql)) {
-      ps.setString(1, email);
+      ps.setString(1, cccd);
       try (ResultSet rs = ps.executeQuery()) {
-        if (rs.next()) {
-          return rs.getBoolean(1);
-        }
+        return rs.next() && rs.getBoolean(1);
       }
-
-    } catch (Exception e) {
-      throw new RuntimeException("Lỗi khi kiểm tra email", e);
+    } catch (java.sql.SQLException e) {
+      throw new IllegalStateException("Lỗi khi kiểm tra CCCD", e);
     }
-    return false;
   }
 
   @Override
@@ -123,7 +123,6 @@ public class StudentDaoImpl implements StudentDao {
           student.setGioiTinh(SexEnum.valueOf(rs.getString("GioiTinh")));
           student.setDiaChi(rs.getString("DiaChi"));
           student.setSdt(rs.getString("SoDienThoai"));
-          student.setEmail(rs.getString("Email"));
           student.setNgayTiepNhan(rs.getDate("NgayTiepNhan"));
 
           return Optional.of(student);
@@ -184,7 +183,6 @@ public class StudentDaoImpl implements StudentDao {
           student.setGioiTinh(SexEnum.valueOf(rs.getString("GioiTinh")));
           student.setDiaChi(rs.getString("DiaChi"));
           student.setSdt(rs.getString("SoDienThoai"));
-          student.setEmail(rs.getString("Email"));
           student.setNgayTiepNhan(rs.getDate("NgayTiepNhan"));
           result.add(student);
         }
@@ -209,10 +207,9 @@ public class StudentDaoImpl implements StudentDao {
         student.setHoTen(rs.getString("HoTen"));
         student.setNgaySinh(rs.getDate("NgaySinh"));
         student.setGioiTinh(SexEnum.valueOf(rs.getString("GioiTinh")));
-        student.setDiaChi(rs.getString("DiaChi"));
-        student.setSdt(rs.getString("SoDienThoai"));
-        student.setEmail(rs.getString("Email"));
-        student.setNgayTiepNhan(rs.getDate("NgayTiepNhan"));
+          student.setDiaChi(rs.getString("DiaChi"));
+          student.setSdt(rs.getString("SoDienThoai"));
+          student.setNgayTiepNhan(rs.getDate("NgayTiepNhan"));
         result.add(student);
       }
     } catch (Exception e) {
@@ -275,7 +272,7 @@ public class StudentDaoImpl implements StudentDao {
   @Override
   public void updateStudent(Student student) {
     String sql =
-        "UPDATE hoc_sinh SET HoTen=?, NgaySinh=?, GioiTinh=?, DiaChi=?, SoDienThoai=?, Email=?"
+        "UPDATE hoc_sinh SET HoTen=?, NgaySinh=?, GioiTinh=?, DiaChi=?, SoDienThoai=?, NgayCapNhat=CURRENT_TIMESTAMP"
             + " WHERE MaHS=?";
     try (Connection connection = JdbcConnect.getConnection();
         PreparedStatement statement = connection.prepareStatement(sql)) {
@@ -284,8 +281,7 @@ public class StudentDaoImpl implements StudentDao {
       statement.setString(3, student.getGioiTinh().name());
       statement.setString(4, student.getDiaChi());
       statement.setString(5, student.getSdt());
-      statement.setString(6, student.getEmail());
-      statement.setLong(7, student.getMaHS());
+      statement.setLong(6, student.getMaHS());
       statement.executeUpdate();
     } catch (Exception exception) {
       throw new RuntimeException("Không thể cập nhật học sinh", exception);

@@ -13,7 +13,6 @@ public class GuardianMapper {
         var guardian = new Guardian();
         guardian.setHoTen(request.getHoTen());
         guardian.setSdt(request.getSdt());
-        guardian.setEmail(request.getEmail());
         guardian.setDiaChi(request.getDiaChi());
         return guardian;
     }
@@ -23,7 +22,6 @@ public class GuardianMapper {
         response.setMaNGH(guardian.getMaNGH());
         response.setHoTen(guardian.getHoTen());
         response.setSdt(guardian.getSdt());
-        response.setEmail(guardian.getEmail());
         response.setDiaChi(guardian.getDiaChi());
         return response;
     }
@@ -31,7 +29,6 @@ public class GuardianMapper {
     public void updateEntity(UpdateGuardianRequest request, Guardian guardian) {
         guardian.setHoTen(request.getHoTen());
         guardian.setSdt(request.getSdt());
-        guardian.setEmail(request.getEmail());
         guardian.setDiaChi(request.getDiaChi());
     }
 }

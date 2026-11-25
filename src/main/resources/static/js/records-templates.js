@@ -24,7 +24,6 @@ export const profiles = {
         ],
       ],
       ["sdt", "Số điện thoại", "tel", false, 20],
-      ["email", "Email", "email", false, 254],
       ["diaChi", "Địa chỉ", "text", false, 500],
     ],
   },
@@ -64,7 +63,6 @@ export const profiles = {
     fields: [
       ["hoTen", "Họ và tên", "text", true, 150],
       ["sdt", "Số điện thoại", "tel", false, 20],
-      ["email", "Email", "email", false, 254],
       ["diaChi", "Địa chỉ", "text", false, 500],
     ],
   },
@@ -76,12 +74,16 @@ function field([name, label, type, required, extra]) {
   const control =
     type === "select"
       ? `<select class="form-select" ${attributes}>${extra.map(([value, text]) => `<option value="${value}">${text}</option>`).join("")}</select>`
-      : `<input class="form-control" ${attributes} type="${type}" ${extra ? `maxlength="${extra}"` : ""} ${type === "date" ? `max="${new Date().toLocaleDateString("en-CA")}"` : ""} ${type === "tel" ? 'pattern="[+0-9 ().-]{8,20}" title="Nhập số điện thoại từ 8 đến 20 ký tự"' : ""}>`;
+      : `<input class="form-control" ${attributes} type="${type}" ${type === "number" ? 'step="0.01" max="99.99"' : ""} ${extra ? `maxlength="${extra}"` : ""} ${type === "date" ? `max="${new Date().toLocaleDateString("en-CA")}"` : ""} ${type === "tel" ? 'pattern="[+0-9 ().-]{8,20}" title="Nhập số điện thoại từ 8 đến 20 ký tự"' : ""}>`;
   return `<div class="col-md-6"><label class="form-label" for="${id}">${label}${required ? ' <span class="text-danger">*</span>' : ""}</label>${control}</div>`;
 }
 
-export function profileFields(type) {
-  return profiles[type].fields.map(field).join("");
+export function profileFields(type, creating) {
+  const fields = [...profiles[type].fields];
+  if (type === "students" && creating) {
+    fields.push(["cmnd", "CCCD", "text", true, 100], ["diemDauVao", "Điểm đầu vào", "number", true]);
+  }
+  return fields.map(field).join("");
 }
 
 export function profilePage(type) {
@@ -112,7 +114,7 @@ export function profilePage(type) {
         ${type === "students" ? '<p class="filter-help">Bộ lọc lớp/khối/năm học xét phân lớp đã duyệt còn hiệu lực hôm nay.</p>' : ""}
         <div class="profile-feedback" id="${type}-feedback" role="status" aria-live="polite"></div>
         <div class="table-responsive"><table class="table app-table">
-          <thead><tr><th>${type === "guardians" ? "Mã" : "Mã hồ sơ"}</th><th>Họ và tên</th><th>${type === "guardians" ? "Địa chỉ" : "Ngày sinh"}</th><th>Liên hệ</th><th>${type === "teachers" ? "Chuyên môn / Trạng thái" : type === "students" ? "Giới tính" : "Email"}</th><th class="text-end">Thao tác</th></tr></thead>
+          <thead><tr><th>${type === "guardians" ? "Mã" : "Mã hồ sơ"}</th><th>Họ và tên</th><th>${type === "guardians" ? "Địa chỉ" : "Ngày sinh"}</th><th>${type === "guardians" ? "Số điện thoại" : "Liên hệ"}</th><th>${type === "teachers" ? "Chuyên môn / Trạng thái" : type === "students" ? "Giới tính" : "—"}</th><th class="text-end">Thao tác</th></tr></thead>
           <tbody id="${type}-rows"></tbody>
         </table></div>
         <div class="table-footer" id="${type}-pager"></div>

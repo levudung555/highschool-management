@@ -1,13 +1,12 @@
 package com.example.highschool_management.model;
 
 import com.example.highschool_management.enums.SexEnum;
-import lombok.Builder;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.experimental.FieldDefaults;
 
+import java.math.BigDecimal;
 import java.sql.Date;
-import java.time.LocalDate;
 
 @FieldDefaults(level = lombok.AccessLevel.PRIVATE)
 @Getter
@@ -20,6 +19,8 @@ public class Student {
     SexEnum gioiTinh;
     String diaChi;
     String sdt;
-    String email;
+    String cmnd;
     Date ngayTiepNhan;
+    Date ngayCapNhat;
+    BigDecimal diemDauVao;
 }

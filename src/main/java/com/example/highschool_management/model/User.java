@@ -23,7 +23,5 @@ public class User {
     @Builder.Default
     String trangThai = "HOAT_DONG";
     @Builder.Default
-    Integer tokenVersion = 0;
-    @Builder.Default
     Set<Role> roles = new HashSet<>();
 }

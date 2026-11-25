@@ -87,7 +87,6 @@ public class StudentGuardianDaoImpl implements StudentGuardianDao {
                     res.setHoTen(rs.getString("HoTen"));
                     res.setDiaChi(rs.getString("DiaChi"));
                     res.setSdt(rs.getString("SoDienThoai"));
-                    res.setEmail(rs.getString("Email"));
                     res.setMoiQuanHe(rs.getString("MoiQuanHe"));
                     res.setLienHeChinh(rs.getInt("LienHeChinh") == 1);
                     list.add(res);

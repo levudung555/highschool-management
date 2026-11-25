@@ -1,7 +1,6 @@
 package com.example.highschool_management.dto.request;
 
 import com.example.highschool_management.enums.SexEnum;
-import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
@@ -23,7 +22,4 @@ public class UpdateStudentRequest {
     String diaChi;
     @Size(max = 20)
     String sdt;
-    @Email
-    @Size(max = 254)
-    String email;
 }

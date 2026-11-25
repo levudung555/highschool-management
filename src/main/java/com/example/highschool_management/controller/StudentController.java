@@ -1,5 +1,6 @@
 package com.example.highschool_management.controller;
 
+import com.example.highschool_management.dto.ApiResponse;
 import com.example.highschool_management.dto.request.CreateStudentRequest;
 import com.example.highschool_management.dto.request.UpdateStudentRequest;
 import com.example.highschool_management.dto.response.StudentResponse;
@@ -9,8 +10,10 @@ import java.util.List;
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
 import lombok.experimental.FieldDefaults;
+import org.springframework.http.MediaType;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 @RestController
 @RequestMapping("/student")
@@ -54,5 +57,14 @@ public class StudentController {
   @PreAuthorize("hasAnyRole('ADMIN', 'BGH', 'GIAO_VU')")
   public boolean deleteStudent(@RequestParam List<Long> maHS) {
     return studentService.deleteStudent(maHS);
+  }
+
+  @PostMapping(value = "/import", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+  @PreAuthorize("hasAnyRole('ADMIN', 'BGH', 'GIAO_VU')")
+  public ApiResponse<com.example.highschool_management.dto.response.ImportStudentResponse> importExcelStudent(
+      @RequestParam("file") MultipartFile file) throws java.io.IOException {
+    return ApiResponse.<com.example.highschool_management.dto.response.ImportStudentResponse>builder()
+        .result(studentService.importStudents(file))
+        .build();
   }
 }

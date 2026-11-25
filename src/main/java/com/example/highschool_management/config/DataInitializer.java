@@ -73,7 +73,6 @@ public class DataInitializer {
                     .password(passwordEncoder.encode(adminPassword))
                     .enabled(true)
                     .trangThai("HOAT_DONG")
-                    .tokenVersion(0)
                     .roles(Set.of(adminRole))
                     .build();
             userDao.save(user);

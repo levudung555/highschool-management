@@ -19,13 +19,12 @@ public class GuardianDaoImpl implements GuardianDao {
 
     @Override
     public Guardian insertGuardian(Guardian guardian) {
-        String sql = "INSERT INTO nguoi_giam_ho (HoTen, SoDienThoai, Email, DiaChi) VALUES (?, ?, ?, ?)";
+        String sql = "INSERT INTO nguoi_giam_ho (HoTen, SoDienThoai, DiaChi) VALUES (?, ?, ?)";
         try (Connection conn = JdbcConnect.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
             ps.setString(1, guardian.getHoTen());
             ps.setString(2, guardian.getSdt());
-            ps.setString(3, guardian.getEmail());
-            ps.setString(4, guardian.getDiaChi());
+            ps.setString(3, guardian.getDiaChi());
             ps.executeUpdate();
             try (ResultSet rs = ps.getGeneratedKeys()) {
                 if (rs.next()) {
@@ -40,14 +39,13 @@ public class GuardianDaoImpl implements GuardianDao {
 
     @Override
     public boolean updateGuardian(Guardian guardian) {
-        String sql = "UPDATE nguoi_giam_ho SET HoTen = ?, SoDienThoai = ?, Email = ?, DiaChi = ? WHERE MaNGH = ?";
+        String sql = "UPDATE nguoi_giam_ho SET HoTen = ?, SoDienThoai = ?, DiaChi = ? WHERE MaNGH = ?";
         try (Connection conn = JdbcConnect.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql)) {
             ps.setString(1, guardian.getHoTen());
             ps.setString(2, guardian.getSdt());
-            ps.setString(3, guardian.getEmail());
-            ps.setString(4, guardian.getDiaChi());
-            ps.setLong(5, guardian.getMaNGH());
+            ps.setString(3, guardian.getDiaChi());
+            ps.setLong(4, guardian.getMaNGH());
             return ps.executeUpdate() > 0;
         } catch (Exception e) {
             throw new RuntimeException("Lỗi khi cập nhật thông tin người giám hộ", e);
@@ -67,23 +65,6 @@ public class GuardianDaoImpl implements GuardianDao {
             }
         } catch (Exception e) {
             throw new RuntimeException("Lỗi khi kiểm tra số điện thoại người giám hộ", e);
-        }
-        return false;
-    }
-
-    @Override
-    public boolean existsEmail(String email) {
-        String sql = "SELECT EXISTS(SELECT 1 FROM nguoi_giam_ho WHERE Email = ?)";
-        try (Connection conn = JdbcConnect.getConnection();
-             PreparedStatement ps = conn.prepareStatement(sql)) {
-            ps.setString(1, email);
-            try (ResultSet rs = ps.executeQuery()) {
-                if (rs.next()) {
-                    return rs.getBoolean(1);
-                }
-            }
-        } catch (Exception e) {
-            throw new RuntimeException("Lỗi khi kiểm tra email người giám hộ", e);
         }
         return false;
     }
@@ -171,7 +152,6 @@ public class GuardianDaoImpl implements GuardianDao {
         guardian.setHoTen(rs.getString("HoTen"));
         guardian.setDiaChi(rs.getString("DiaChi"));
         guardian.setSdt(rs.getString("SoDienThoai"));
-        guardian.setEmail(rs.getString("Email"));
         return guardian;
     }
 }

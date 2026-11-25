@@ -212,8 +212,8 @@ function drawRows(type) {
       <td><span class="grade-chip">${escapeHtml(code)}</span></td>
       <td><strong>${escapeHtml(row.hoTen)}</strong></td>
       <td>${type === "guardians" ? escapeHtml(row.diaChi || "—") : formatDate(row.ngaySinh)}</td>
-      <td>${escapeHtml(row.sdt || "—")}${type !== "guardians" ? `<small class="subtle-label d-block">${escapeHtml(row.email || "")}</small>` : ""}</td>
-      <td>${type === "teachers" ? `${escapeHtml(row.chuyenMon || "—")}<small class="d-block subtle-label">${escapeHtml(teacherStatus(row.trangThai))}</small>` : type === "students" ? ({ NAM: "Nam", NU: "Nữ", KHAC: "Khác" }[row.gioiTinh] || "—") : escapeHtml(row.email || "—")}</td>
+      <td>${escapeHtml(row.sdt || "—")}${type === "teachers" ? `<small class="subtle-label d-block">${escapeHtml(row.email || "")}</small>` : ""}</td>
+      <td>${type === "teachers" ? `${escapeHtml(row.chuyenMon || "—")}<small class="d-block subtle-label">${escapeHtml(teacherStatus(row.trangThai))}</small>` : type === "students" ? ({ NAM: "Nam", NU: "Nữ", KHAC: "Khác" }[row.gioiTinh] || "—") : "—"}</td>
       <td><div class="row-actions">
         <button class="btn btn-outline-primary" data-profile-action="detail" data-type="${type}" data-id="${id}">Chi tiết</button>
         <button class="btn btn-light" data-profile-action="edit" data-type="${type}" data-id="${id}" aria-label="Sửa ${escapeHtml(row.hoTen)}">Sửa</button>
@@ -235,7 +235,7 @@ function editProfile(type, row = null) {
   $("profile-error").classList.add("d-none");
   $("profile-title").textContent =
     `${row ? "Chỉnh sửa" : "Thêm"} ${profiles[type].singular}`;
-  $("profile-fields").innerHTML = profileFields(type);
+  $("profile-fields").innerHTML = profileFields(type, !row);
   if (row)
     profiles[type].fields.forEach(([name]) => {
       $(`profile-${name}`).value = row[name] || "";

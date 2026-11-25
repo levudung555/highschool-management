@@ -1,13 +1,13 @@
 package com.example.highschool_management.dto.request;
 
 import com.example.highschool_management.enums.SexEnum;
-import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 import lombok.Getter;
 import lombok.Setter;
 
+import java.math.BigDecimal;
 import java.sql.Date;
 
 @Getter
@@ -24,7 +24,11 @@ public class CreateStudentRequest {
     String diaChi;
     @Size(max = 20)
     String sdt;
-    @Email
-    @Size(max = 254)
-    String email;
+    @NotBlank(message = "CCCD không được để trống")
+    @Size(max = 100)
+    String cmnd;
+
+    @NotNull(message = "Điểm đầu vào không được để trống")
+    @jakarta.validation.constraints.Digits(integer = 2, fraction = 2)
+    BigDecimal diemDauVao;
 }

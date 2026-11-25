@@ -38,11 +38,6 @@ public class GuardianServiceImpl implements GuardianService {
       throw new com.example.highschool_management.exception.BusinessException(
           "Số điện thoại đã tồn tại");
     }
-    if (request.getEmail() != null
-        && !request.getEmail().isBlank()
-        && guardianDao.existsEmail(request.getEmail())) {
-      throw new com.example.highschool_management.exception.BusinessException("Email đã tồn tại");
-    }
 
     Guardian guardian = guardianMapper.toEntity(request);
     return guardianMapper.toResponse(guardianDao.insertGuardian(guardian));
@@ -63,12 +58,6 @@ public class GuardianServiceImpl implements GuardianService {
         && guardianDao.existsSoDienThoai(request.getSdt())) {
       throw new com.example.highschool_management.exception.BusinessException(
           "Số điện thoại đã tồn tại");
-    }
-    if (request.getEmail() != null
-        && !request.getEmail().isBlank()
-        && !request.getEmail().equals(guardian.getEmail())
-        && guardianDao.existsEmail(request.getEmail())) {
-      throw new com.example.highschool_management.exception.BusinessException("Email đã tồn tại");
     }
 
     guardianMapper.updateEntity(request, guardian);

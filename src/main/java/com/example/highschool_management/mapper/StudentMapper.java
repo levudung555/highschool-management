@@ -15,7 +15,8 @@ public class StudentMapper {
     student.setGioiTinh(request.getGioiTinh());
     student.setDiaChi(request.getDiaChi());
     student.setSdt(request.getSdt());
-    student.setEmail(request.getEmail());
+    student.setCmnd(request.getCmnd());
+    student.setDiemDauVao(request.getDiemDauVao());
     return student;
   }
 
@@ -29,7 +30,6 @@ public class StudentMapper {
     response.setGioiTinh(student.getGioiTinh());
     response.setDiaChi(student.getDiaChi());
     response.setSdt(student.getSdt());
-    response.setEmail(student.getEmail());
     response.setNgayTiepNhan(
         student.getNgayTiepNhan() == null ? null : student.getNgayTiepNhan().toLocalDate());
     return response;
@@ -41,6 +41,5 @@ public class StudentMapper {
     student.setGioiTinh(request.getGioiTinh());
     student.setDiaChi(request.getDiaChi());
     student.setSdt(request.getSdt());
-    student.setEmail(request.getEmail());
   }
 }

@@ -1,6 +1,5 @@
 package com.example.highschool_management.dto.request;
 
-import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
 import lombok.Getter;
@@ -14,9 +13,6 @@ public class UpdateGuardianRequest {
     String hoTen;
     @Size(max = 20)
     String sdt;
-    @Email(message = "Email không đúng định dạng")
-    @Size(max = 254)
-    String email;
     @Size(max = 500)
     String diaChi;
 }

@@ -22,8 +22,10 @@ CREATE TABLE IF NOT EXISTS hoc_sinh (
   GioiTinh varchar(10) NOT NULL,
   DiaChi varchar(500) DEFAULT NULL,
   SoDienThoai varchar(20) DEFAULT NULL,
-  Email varchar(254) DEFAULT NULL,
-  NgayTiepNhan date DEFAULT NULL,
+  NgayTiepNhan DATETIME NOT NULL,
+  CMMD VARCHAR(100) NOT NULL,
+  NgayCapNhat DATETIME NOT NULL,
+  DiemDauVao DECIMAL(4,2) NOT NULL,
   PRIMARY KEY (MaHS),
   UNIQUE KEY uk_hs_maso (MaSoHS),
   CONSTRAINT ck_hs_gioitinh CHECK ((GioiTinh in ('NAM','NU','KHAC'))),
@@ -66,7 +68,6 @@ CREATE TABLE IF NOT EXISTS tai_khoan (
   HoTen varchar(150) NOT NULL,
   Email varchar(254) DEFAULT NULL,
   TrangThai varchar(20) NOT NULL DEFAULT 'HOAT_DONG',
-  TokenVersion int NOT NULL DEFAULT '0',
   PRIMARY KEY (MaTK),
   UNIQUE KEY uk_tk_tendangnhap (TenDangNhap),
   UNIQUE KEY uk_tk_gv (MaGV),
@@ -140,10 +141,10 @@ INSERT INTO vai_tro (MaVT, MaSoVaiTro, TenVaiTro) VALUES
 (3, 'ADMIN', 'Quản Trị Viên'),
 (4, 'GIAO_VIEN', 'Giáo Viên');
 
-INSERT INTO tai_khoan (MaTK, TenDangNhap, MatKhauBam, HoTen, TrangThai, TokenVersion) VALUES
-(1, 'bgh', '$2a$10$0ns4v7JclyWzwijc48x/yuzjGvfgS1x6xapRWO6vSyqkBGNdKUJiS', 'Ban Giám Hiệu', 'HOAT_DONG', 0),
-(2, 'giaovu', '$2a$10$0ns4v7JclyWzwijc48x/yuzjGvfgS1x6xapRWO6vSyqkBGNdKUJiS', 'Giáo Vụ', 'HOAT_DONG', 0),
-(3, 'locked', '$2a$10$0ns4v7JclyWzwijc48x/yuzjGvfgS1x6xapRWO6vSyqkBGNdKUJiS', 'Tài khoản khóa', 'BI_KHOA', 0);
+INSERT INTO tai_khoan (MaTK, TenDangNhap, MatKhauBam, HoTen, TrangThai) VALUES
+(1, 'bgh', '$2a$10$0ns4v7JclyWzwijc48x/yuzjGvfgS1x6xapRWO6vSyqkBGNdKUJiS', 'Ban Giám Hiệu', 'HOAT_DONG'),
+(2, 'giaovu', '$2a$10$0ns4v7JclyWzwijc48x/yuzjGvfgS1x6xapRWO6vSyqkBGNdKUJiS', 'Giáo Vụ', 'HOAT_DONG'),
+(3, 'locked', '$2a$10$0ns4v7JclyWzwijc48x/yuzjGvfgS1x6xapRWO6vSyqkBGNdKUJiS', 'Tài khoản khóa', 'BI_KHOA');
 
 INSERT INTO tai_khoan_vai_tro (MaTK, MaVT) VALUES
 (1, 1),
@@ -159,8 +160,8 @@ INSERT INTO khoi_lop (MaKhoi, SoKhoi) VALUES
 INSERT INTO lop_hoc (MaLop, MaNH, MaKhoi, TenLop, TrangThai) VALUES
 (1, 1, 1, '10A1', 'HOAT_DONG');
 
-INSERT INTO hoc_sinh (MaHS, MaSoHS, HoTen, NgaySinh, GioiTinh, NgayTiepNhan) VALUES
-(1, 'HS0001', 'Nguyen Van A', '2008-01-01', 'NAM', '2023-09-05');
+INSERT INTO hoc_sinh (MaHS, MaSoHS, HoTen, NgaySinh, GioiTinh, NgayTiepNhan, CMMD, NgayCapNhat, DiemDauVao) VALUES
+(1, 'HS0001', 'Nguyen Van A', '2008-01-01', 'NAM', '2023-09-05', '000000000001', CURRENT_TIMESTAMP, 8.50);
 
 INSERT INTO xep_lop (MaXL, MaHS, MaLop, TuNgay, DenNgay, LyDoKetThuc, MaTKNguoiThucHien, ThoiDiemThucHien) VALUES
 (1, 1, 1, '2023-09-05', NULL, NULL, 1, CURRENT_TIMESTAMP);

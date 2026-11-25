@@ -20,7 +20,7 @@ public class UserDaoImpl implements UserDao {
     @Override
     public Optional<User> findByUsername(String username) {
         String sql = """
-            SELECT t.MaTK, t.MaGV, t.TenDangNhap, t.MatKhauBam, t.HoTen, t.Email, t.TrangThai, t.TokenVersion,
+            SELECT t.MaTK, t.MaGV, t.TenDangNhap, t.MatKhauBam, t.HoTen, t.Email, t.TrangThai,
                    v.MaVT, v.MaSoVaiTro, v.TenVaiTro
             FROM tai_khoan t
             LEFT JOIN tai_khoan_vai_tro tv ON t.MaTK = tv.MaTK
@@ -45,7 +45,6 @@ public class UserDaoImpl implements UserDao {
                                 .email(rs.getString("Email"))
                                 .trangThai(trangThai)
                                 .enabled("HOAT_DONG".equalsIgnoreCase(trangThai))
-                                .tokenVersion(rs.getInt("TokenVersion"))
                                 .roles(roles)
                                 .build();
                     }
@@ -103,8 +102,8 @@ public class UserDaoImpl implements UserDao {
     @Override
     public User save(User user) {
         String insertUserSql = """
-            INSERT INTO tai_khoan (MaGV, TenDangNhap, MatKhauBam, HoTen, Email, TrangThai, TokenVersion)
-            VALUES (?, ?, ?, ?, ?, ?, ?)
+            INSERT INTO tai_khoan (MaGV, TenDangNhap, MatKhauBam, HoTen, Email, TrangThai)
+            VALUES (?, ?, ?, ?, ?, ?)
             """;
         String insertRoleSql = "INSERT INTO tai_khoan_vai_tro (MaTK, MaVT) VALUES (?, ?)";
 
@@ -124,7 +123,6 @@ public class UserDaoImpl implements UserDao {
                         psUser.setString(4, user.getFullName());
                         psUser.setString(5, user.getEmail());
                         psUser.setString(6, user.getTrangThai() != null ? user.getTrangThai() : (user.isEnabled() ? "HOAT_DONG" : "BI_KHOA"));
-                        psUser.setInt(7, user.getTokenVersion() != null ? user.getTokenVersion() : 0);
                         psUser.executeUpdate();
                         try (ResultSet rs = psUser.getGeneratedKeys()) {
                             if (rs.next()) {
@@ -135,7 +133,7 @@ public class UserDaoImpl implements UserDao {
                 } else {
                     String updateUserSql = """
                         UPDATE tai_khoan
-                        SET MaGV = ?, MatKhauBam = ?, HoTen = ?, Email = ?, TrangThai = ?, TokenVersion = ?
+                        SET MaGV = ?, MatKhauBam = ?, HoTen = ?, Email = ?, TrangThai = ?
                         WHERE MaTK = ?
                         """;
                     try (PreparedStatement psUser = conn.prepareStatement(updateUserSql)) {
@@ -148,8 +146,7 @@ public class UserDaoImpl implements UserDao {
                         psUser.setString(3, user.getFullName());
                         psUser.setString(4, user.getEmail());
                         psUser.setString(5, user.getTrangThai() != null ? user.getTrangThai() : (user.isEnabled() ? "HOAT_DONG" : "BI_KHOA"));
-                        psUser.setInt(6, user.getTokenVersion() != null ? user.getTokenVersion() : 0);
-                        psUser.setLong(7, user.getId());
+                        psUser.setLong(6, user.getId());
                         psUser.executeUpdate();
                     }
                     try (PreparedStatement psDeleteRoles = conn.prepareStatement("DELETE FROM tai_khoan_vai_tro WHERE MaTK = ?")) {
