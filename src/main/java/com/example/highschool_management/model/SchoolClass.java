@@ -1,6 +1,12 @@
 package com.example.highschool_management.model;
 
+@lombok.Getter
+@lombok.Setter
 public class SchoolClass {
+  private Long maToHop;
+  private Integer siSoToiDa;
+  private Integer thuTuXep;
+
   private Long maLop;
   private Long maNamHoc;
   private Long maKhoi;

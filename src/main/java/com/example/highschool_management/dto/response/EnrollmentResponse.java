@@ -10,8 +10,7 @@ public record EnrollmentResponse(
     LocalDate tuNgay,
     LocalDate denNgay,
     String lyDoKetThuc,
-    String trangThaiDuyet,
-    Long maTaiKhoanDuyet,
-    LocalDateTime duyetLuc,
+    Long maTKNguoiThucHien,
+    LocalDateTime thoiDiemThucHien,
     Long maXepLopNguon,
-    String lyDoChuyen) {}
+    String lyDoChuyen, Long maHoSoNhapHoc) {}

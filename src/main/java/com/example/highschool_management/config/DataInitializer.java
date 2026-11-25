@@ -2,13 +2,9 @@ package com.example.highschool_management.config;
 
 import com.example.highschool_management.dao.RoleDao;
 import com.example.highschool_management.dao.UserDao;
-import com.example.highschool_management.enums.RoleType;
 import com.example.highschool_management.model.Role;
 import com.example.highschool_management.model.User;
-import java.sql.Connection;
-import java.sql.Statement;
 import java.util.Set;
-import javax.sql.DataSource;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -38,48 +34,21 @@ public class DataInitializer {
     private String adminEmail;
 
     @Bean
-    CommandLineRunner initData(DataSource dataSource) {
+    CommandLineRunner initData() {
         return args -> {
-            initSchema(dataSource);
+            try {
+                createRoleIfNotExists("ADMIN", "Quản trị viên");
+                createRoleIfNotExists("BGH", "Ban Giám hiệu");
+                createRoleIfNotExists("GIAO_VU", "Giáo vụ");
+                createRoleIfNotExists("GIAO_VIEN", "Giáo viên");
+                createRoleIfNotExists("TEACHER", "Giáo viên");
+                createRoleIfNotExists("STUDENT", "Học sinh");
 
-            createRoleIfNotExists(RoleType.ADMIN.name(), "Quản trị viên");
-            createRoleIfNotExists(RoleType.TEACHER.name(), "Giáo viên");
-            createRoleIfNotExists(RoleType.STUDENT.name(), "Học sinh");
-
-            createAdminIfNotExists();
+                createAdminIfNotExists();
+            } catch (Exception e) {
+                log.error("Lỗi khi khởi tạo dữ liệu: ", e);
+            }
         };
-    }
-
-    private void initSchema(DataSource dataSource) {
-        try (Connection conn = dataSource.getConnection();
-             Statement stmt = conn.createStatement()) {
-            stmt.execute("CREATE TABLE IF NOT EXISTS vai_tro ("
-                    + "MaVT BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY, "
-                    + "MaSoVaiTro VARCHAR(40) NOT NULL UNIQUE, "
-                    + "TenVaiTro VARCHAR(100) NOT NULL"
-                    + ")");
-            stmt.execute("CREATE TABLE IF NOT EXISTS tai_khoan ("
-                    + "MaTK BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY, "
-                    + "MaGV BIGINT UNSIGNED, "
-                    + "TenDangNhap VARCHAR(100) NOT NULL UNIQUE, "
-                    + "MatKhauBam VARCHAR(255) NOT NULL, "
-                    + "HoTen VARCHAR(150), "
-                    + "Email VARCHAR(254) UNIQUE, "
-                    + "TrangThai VARCHAR(20) DEFAULT 'HOAT_DONG', "
-                    + "TokenVersion INT UNSIGNED DEFAULT 0"
-                    + ")");
-            stmt.execute("CREATE TABLE IF NOT EXISTS tai_khoan_vai_tro ("
-                    + "MaTK BIGINT UNSIGNED NOT NULL, "
-                    + "MaVT BIGINT UNSIGNED NOT NULL, "
-                    + "PRIMARY KEY (MaTK, MaVT)"
-                    + ")");
-            stmt.execute("CREATE TABLE IF NOT EXISTS invalidated_tokens ("
-                    + "id VARCHAR(64) PRIMARY KEY, "
-                    + "expire_time TIMESTAMP NOT NULL"
-                    + ")");
-        } catch (Exception e) {
-            log.warn("Could not auto-create auth tables: {}", e.getMessage());
-        }
     }
 
     private void createRoleIfNotExists(String name, String description) {
@@ -94,8 +63,8 @@ public class DataInitializer {
 
     private void createAdminIfNotExists() {
         if (!userDao.existsByUsername(adminUsername)) {
-            Role adminRole = roleDao.findByName(RoleType.ADMIN.name())
-                    .orElseThrow(() -> new RuntimeException("Role not found"));
+            Role adminRole = roleDao.findByName("ADMIN")
+                    .orElseThrow(() -> new RuntimeException("Role ADMIN not found"));
 
             User user = User.builder()
                     .username(adminUsername)

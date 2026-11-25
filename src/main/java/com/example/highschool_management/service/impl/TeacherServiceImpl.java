@@ -54,7 +54,7 @@ public class TeacherServiceImpl implements TeacherService {
                     new com.example.highschool_management.exception.BusinessException(
                         "Giáo viên không tồn tại"));
 
-    if (!request.getSdt().equals(teacher.getSdt())
+    if (request.getSdt() != null && !request.getSdt().equals(teacher.getSdt())
         && teacherDao.existsSoDienThoai(request.getSdt())) {
       throw new com.example.highschool_management.exception.BusinessException(
           "Số điện thoại đã tồn tại");

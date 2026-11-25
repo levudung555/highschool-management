@@ -344,21 +344,12 @@ async function loadRoster(page = state.rosterPage) {
 async function loadRequests(page = state.requestPage) {
   state.requestPage = page;
   const seq = (state.seq.requests = (state.seq.requests || 0) + 1);
-  loading("requestRows", 6);
-  document
-    .querySelectorAll("[data-request-status]")
-    .forEach((el) =>
-      el.classList.toggle(
-        "active",
-        el.dataset.requestStatus === state.requestStatus,
-      ),
-    );
+  loading("requestRows", 5);
   try {
     const result = await api(
       "/enrollments?" +
         query({
           tuKhoa: $("requestKeyword").value,
-          trangThai: state.requestStatus,
           trang: page,
           kichThuoc: 8,
         }),
@@ -370,11 +361,9 @@ async function loadRequests(page = state.requestPage) {
     if (!result.danhSach.length)
       empty(
         "requestRows",
-        6,
-        "Không có yêu cầu phù hợp",
-        state.requestStatus === "CHO_DUYET"
-          ? "Mọi việc đã được xử lý. Bạn có thể tạo yêu cầu xếp hoặc chuyển lớp mới."
-          : "Thử thay đổi trạng thái hoặc từ khóa tìm kiếm.",
+        5,
+        "Không có bản ghi xếp lớp phù hợp",
+        "Bạn có thể thực hiện xếp hoặc chuyển lớp cho học sinh.",
       );
     else
       $("requestRows").innerHTML = result.danhSach
@@ -387,13 +376,13 @@ async function loadRequests(page = state.requestPage) {
                 .slice(-2)
                 .map((x) => x[0])
                 .join(""),
-            )}</span><div><strong>${escapeHtml(r.hoTen)}</strong><small>${escapeHtml(r.maSoHocSinh)}</small></div></div></td><td><span class="type-label">${icon(r.maXepLopNguon ? "transfer" : "plus")}${r.maXepLopNguon ? "Chuyển lớp" : "Xếp lớp"}</span><small class="subtle-label">Yêu cầu #${r.maXepLop}</small></td><td><strong>${escapeHtml(r.tenLop)}</strong><small class="d-block subtle-label mt-1">${escapeHtml(r.namHoc)}</small></td><td>${date(r.tuNgay)}</td><td>${status(r.trangThaiDuyet)}</td><td><div class="row-actions"><button class="btn icon-button" data-action="detail" data-id="${r.maXepLop}" aria-label="Chi tiết yêu cầu ${r.maXepLop}" title="Chi tiết">${icon("eye")}</button>${r.trangThaiDuyet === "CHO_DUYET" && mayApprove() ? `<button class="btn btn-outline-primary" data-action="approve" data-id="${r.maXepLop}">${icon("check")} Duyệt</button><button class="btn icon-button danger" data-action="reject" data-id="${r.maXepLop}" aria-label="Từ chối yêu cầu ${r.maXepLop}" title="Từ chối">${icon("x")}</button>` : ""}</div></td></tr>`,
+            )}</span><div><strong>${escapeHtml(r.hoTen)}</strong><small>${escapeHtml(r.maSoHocSinh)}</small></div></div></td><td><span class="type-label">${icon(r.maXepLopNguon ? "transfer" : "plus")}${r.maXepLopNguon ? "Chuyển lớp" : "Xếp lớp"}</span><small class="subtle-label">Mã #${r.maXepLop}</small></td><td><strong>${escapeHtml(r.tenLop)}</strong><small class="d-block subtle-label mt-1">${escapeHtml(r.namHoc)}</small></td><td>${date(r.tuNgay)}</td><td><div class="row-actions"><button class="btn icon-button" data-action="detail" data-id="${r.maXepLop}" aria-label="Chi tiết #${r.maXepLop}" title="Chi tiết">${icon("eye")}</button></div></td></tr>`,
         )
         .join("");
     pager("requestPager", result, (p) => loadRequests(p));
   } catch (error) {
     if (seq === state.seq.requests) {
-      tableError("requestRows", 6, error);
+      tableError("requestRows", 5, error);
       $("requestPager").textContent = "";
     }
   }
@@ -444,11 +433,11 @@ async function loadHistory() {
         data
           .map(
             (e) =>
-              `<article class="timeline-item"><span class="timeline-dot ${e.trangThaiDuyet === "CHO_DUYET" ? "pending" : e.trangThaiDuyet === "TU_CHOI" ? "rejected" : ""}"></span><h3>${escapeHtml(className(e.maLop))} ${status(e.trangThaiDuyet)}</h3><p>${icon("clock")} ${date(e.tuNgay)} → ${date(e.denNgay)}</p><p>${e.maXepLopNguon ? `Chuyển từ phân lớp #${e.maXepLopNguon}` : "Yêu cầu xếp lớp"} · Mã #${e.maXepLop}</p>${e.lyDoChuyen ? `<p>Lý do chuyển: ${escapeHtml(e.lyDoChuyen)}</p>` : ""}${e.lyDoKetThuc ? `<p>Kết thúc: ${escapeHtml(e.lyDoKetThuc)}</p>` : ""}${e.duyetLuc ? `<p>Đã xử lý ngày ${date(e.duyetLuc)} · Tài khoản #${e.maTaiKhoanDuyet}</p>` : ""}</article>`,
+              `<article class="timeline-item"><span class="timeline-dot"></span><h3>${escapeHtml(className(e.maLop))}</h3><p>${icon("clock")} ${date(e.tuNgay)} → ${date(e.denNgay)}</p><p>${e.maXepLopNguon ? `Chuyển từ phân lớp #${e.maXepLopNguon}` : "Xếp lớp"} · Mã #${e.maXepLop}</p>${e.lyDoChuyen ? `<p>Lý do chuyển: ${escapeHtml(e.lyDoChuyen)}</p>` : ""}${e.lyDoKetThuc ? `<p>Kết thúc: ${escapeHtml(e.lyDoKetThuc)}</p>` : ""}</article>`,
           )
           .join("") +
         "</div>"
-      : `<div class="empty-state"><div class="empty-symbol">${icon("history")}</div><strong>Chưa có lịch sử xếp lớp</strong><p>Tạo yêu cầu xếp lớp để bắt đầu hành trình học tập.</p></div>`;
+      : `<div class="empty-state"><div class="empty-symbol">${icon("history")}</div><strong>Chưa có lịch sử xếp lớp</strong><p>Tạo xếp lớp để bắt đầu hành trình học tập.</p></div>`;
   } catch (error) {
     if (seq === state.seq.history)
       $("historyTimeline").innerHTML =
@@ -620,15 +609,10 @@ async function detail(id) {
         s ? `${s.hoTen} · ${s.maSoHocSinh}` : `Hồ sơ #${e.maHocSinh}`,
       ],
       ["Lớp đích", className(e.maLop)],
-      ["Loại yêu cầu", e.maXepLopNguon ? "Chuyển lớp" : "Xếp lớp"],
-      ["Trạng thái", e.trangThaiDuyet],
+      ["Hình thức", e.maXepLopNguon ? "Chuyển lớp" : "Xếp lớp"],
       ["Ngày bắt đầu", date(e.tuNgay)],
       ["Mốc kết thúc", date(e.denNgay)],
       ["Phân lớp nguồn", e.maXepLopNguon ? `#${e.maXepLopNguon}` : "Không có"],
-      [
-        "Người duyệt",
-        e.maTaiKhoanDuyet ? `Tài khoản #${e.maTaiKhoanDuyet}` : "Chưa xử lý",
-      ],
       ["Lý do chuyển", e.lyDoChuyen || "—"],
       ["Lý do kết thúc", e.lyDoKetThuc || "—"],
     ];
@@ -637,7 +621,7 @@ async function detail(id) {
       fields
         .map(
           ([k, v]) =>
-            `<div><dt>${escapeHtml(k)}</dt><dd>${k === "Trạng thái" ? status(v) : escapeHtml(v)}</dd></div>`,
+            `<div><dt>${escapeHtml(k)}</dt><dd>${escapeHtml(v)}</dd></div>`,
         )
         .join("") +
       '</dl><p class="form-text mb-0">Mốc kết thúc là ngày học sinh không còn thuộc phân lớp.</p>';

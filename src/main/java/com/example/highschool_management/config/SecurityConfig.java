@@ -15,14 +15,19 @@ import org.springframework.security.web.SecurityFilterChain;
 @EnableMethodSecurity
 public class SecurityConfig {
 
-    private static final String[] PUBLIC_URLS = {
-        "/auth/token", "/auth/introspect", "/auth/logout", "/auth/refresh"
+    private static final String[] PUBLIC_POST_URLS = {
+        "/auth/token", "/auth/introspect", "/auth/logout", "/auth/refresh",
+    };
+
+    private static final String[] PUBLIC_GET_URLS = {
+        "/", "/index.html", "/login.html", "/css/**", "/js/**", "/vendor/**", "/favicon.ico"
     };
 
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity httpSecurity, CustomJwtDecoder customJwtDecoder) throws Exception {
         httpSecurity.authorizeHttpRequests(request -> request
-                .requestMatchers(HttpMethod.POST, PUBLIC_URLS).permitAll()
+                .requestMatchers(HttpMethod.POST, PUBLIC_POST_URLS).permitAll()
+                .requestMatchers(HttpMethod.GET, PUBLIC_GET_URLS).permitAll()
                 .anyRequest().authenticated());
 
         httpSecurity.oauth2ResourceServer(oauth2 -> oauth2

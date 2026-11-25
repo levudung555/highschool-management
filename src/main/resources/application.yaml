@@ -2,8 +2,13 @@ spring:
   application:
     name: highschool-management
 
+  sql:
+    init:
+      mode: always
+      schema-locations: classpath:sql/jwt-revocation.sql
+
   datasource:
-    url: ${DB_URL:jdbc:mysql://localhost:3306/highschool_management}
+    url: ${DB_URL:jdbc:mysql://localhost:3306/highschool_management_v3}
     username: ${DB_USERNAME:root}
     password: ${DB_PASSWORD:123456}
     driver-class-name: com.mysql.cj.jdbc.Driver

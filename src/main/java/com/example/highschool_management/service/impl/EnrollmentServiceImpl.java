@@ -37,8 +37,8 @@ public class EnrollmentServiceImpl implements EnrollmentService {
     this.clock = clock;
   }
 
-  private void quyenGiaoVu() {
-    nguoiDung.yeuCauVaiTro("ADMIN", "BGH", "GIAO_VU");
+  private long quyenGiaoVu() {
+    return nguoiDung.yeuCauVaiTro("ADMIN", "BGH", "GIAO_VU");
   }
 
   private void kiemTraMa(Long id) {
@@ -98,22 +98,23 @@ public class EnrollmentServiceImpl implements EnrollmentService {
     e.setMaLop(lop);
     e.setTuNgay(start);
     e.setDenNgay(end);
-    e.setTrangThaiDuyet("CHO_DUYET");
     return e;
   }
 
   @Override
   @Transactional(isolation = Isolation.READ_COMMITTED)
   public EnrollmentResponse xepLop(EnrollStudentRequest request) {
-    quyenGiaoVu();
+    long actor = quyenGiaoVu();
     kiemTraNgay(request.tuNgay());
     khoaHocSinh(request.maHocSinh());
     var lop = khoaLop(request.maLop());
     kiemTraLop(lop, request.tuNgay());
-    var end = dao.namHoc(lop.getMaNamHoc()).ketThuc().plusDays(1);
+    var end = dao.namHoc(lop.getMaNamHoc()).ketThuc();
     var e = moi(request.maHocSinh(), request.maLop(), request.tuNgay(), end);
     kiemTraTrung(e);
 
+    e.setMaTKNguoiThucHien(actor);
+    e.setThoiDiemThucHien(LocalDateTime.now(clock).truncatedTo(java.time.temporal.ChronoUnit.MILLIS));
     e.setMaXepLop(dao.taoChoDuyet(e));
     return mapper.sangResponse(e);
   }
@@ -121,19 +122,18 @@ public class EnrollmentServiceImpl implements EnrollmentService {
   @Override
   @Transactional(isolation = Isolation.READ_COMMITTED)
   public EnrollmentResponse chuyenLop(TransferStudentRequest request) {
-    quyenGiaoVu();
+    long actor = quyenGiaoVu();
     kiemTraNgay(request.ngayChuyen());
     khoaHocSinh(request.maHocSinh());
     var sources =
         dao.lichSu(request.maHocSinh()).stream()
             .filter(
                 e ->
-                    "DA_DUYET".equals(e.getTrangThaiDuyet())
-                        && !e.getTuNgay().isAfter(request.ngayChuyen())
-                        && (e.getDenNgay() == null || e.getDenNgay().isAfter(request.ngayChuyen())))
+                    !e.getTuNgay().isAfter(request.ngayChuyen())
+                        && (e.getDenNgay() == null || !e.getDenNgay().isBefore(request.ngayChuyen())))
             .toList();
     if (sources.size() != 1)
-      throw new BusinessException("Cần đúng một phân lớp đã duyệt tại ngày chuyển");
+      throw new BusinessException("Cần đúng một phân lớp đang hoạt động tại ngày chuyển");
     var source = sources.getFirst();
     if (!request.ngayChuyen().isAfter(source.getTuNgay()))
       throw new BusinessException("Ngày chuyển phải sau ngày bắt đầu của phân lớp cũ");
@@ -147,63 +147,30 @@ public class EnrollmentServiceImpl implements EnrollmentService {
       throw new BusinessException("Chuyển lớp chỉ trong cùng năm học và khối");
     kiemTraLop(target, request.ngayChuyen());
     var end = source.getDenNgay();
-    if (end == null) end = dao.namHoc(target.getMaNamHoc()).ketThuc().plusDays(1);
+    if (end == null) end = dao.namHoc(target.getMaNamHoc()).ketThuc();
     var e = moi(request.maHocSinh(), target.getMaLop(), request.ngayChuyen(), end);
     e.setMaXepLopNguon(source.getMaXepLop());
     e.setLyDoChuyen(request.lyDo().trim());
     kiemTraTrung(e);
 
+    dao.ketThuc(source.getMaXepLop(), request.ngayChuyen().minusDays(1), e.getLyDoChuyen());
+    e.setMaTKNguoiThucHien(actor);
+    e.setThoiDiemThucHien(LocalDateTime.now(clock).truncatedTo(java.time.temporal.ChronoUnit.MILLIS));
     e.setMaXepLop(dao.taoChoDuyet(e));
-    dao.luuYeuCauChuyen(e.getMaXepLop(), source.getMaXepLop(), e.getLyDoChuyen());
+    dao.luuYeuCauChuyen(e.getMaXepLop(), source.getMaXepLop(), e.getLyDoChuyen(), actor);
     return mapper.sangResponse(e);
   }
 
   @Override
   @Transactional(isolation = Isolation.READ_COMMITTED)
   public EnrollmentResponse duyet(Long id) {
-    return quyetDinh(id, true);
+    return mapper.sangResponse(lay(id));
   }
 
   @Override
   @Transactional(isolation = Isolation.READ_COMMITTED)
   public EnrollmentResponse tuChoi(Long id) {
-    return quyetDinh(id, false);
-  }
-
-  private EnrollmentResponse quyetDinh(Long id, boolean approve) {
-    long actor = nguoiDung.yeuCauVaiTro("ADMIN", "BGH");
-    var hint = lay(id);
-    khoaHocSinh(hint.getMaHocSinh());
-    var e = lay(id);
-    var status = approve ? "DA_DUYET" : "TU_CHOI";
-    if (status.equals(e.getTrangThaiDuyet()))
-      return mapper.sangResponse(e); // repeat: no stock/audit changes
-    if (!"CHO_DUYET".equals(e.getTrangThaiDuyet()))
-      throw new BusinessException("Yêu cầu đã được xử lý");
-    Enrollment source = e.getMaXepLopNguon() == null ? null : lay(e.getMaXepLopNguon());
-    var locked =
-        source == null ? khoaCacLop(e.getMaLop()) : khoaCacLop(source.getMaLop(), e.getMaLop());
-    if (approve) {
-      kiemTraNgay(e.getTuNgay());
-      var target = locked.get(e.getMaLop());
-      kiemTraLop(target, e.getTuNgay());
-      kiemTraTrung(e);
-
-      if (source != null) {
-        if (!"DA_DUYET".equals(source.getTrangThaiDuyet())
-            || !source.getMaHocSinh().equals(e.getMaHocSinh())
-            || !source.getTuNgay().isBefore(e.getTuNgay())
-            || (source.getDenNgay() != null && !source.getDenNgay().isAfter(e.getTuNgay())))
-          throw new BusinessException("Phân lớp nguồn đã thay đổi, cần tạo lại yêu cầu chuyển");
-        dao.ketThuc(source.getMaXepLop(), e.getTuNgay(), e.getLyDoChuyen());
-      }
-    }
-    var at = LocalDateTime.now(clock);
-    dao.quyetDinh(id, status, actor, at);
-    e.setTrangThaiDuyet(status);
-    e.setMaTaiKhoanDuyet(actor);
-    e.setDuyetLuc(at);
-    return mapper.sangResponse(e);
+    return mapper.sangResponse(lay(id));
   }
 
   @Override
@@ -265,12 +232,9 @@ public class EnrollmentServiceImpl implements EnrollmentService {
   public PageResponse<EnrollmentRequestResponse> timYeuCau(
       String tuKhoa, String trangThai, int trang, int kichThuoc) {
     String k = kiemTraTimKiem(tuKhoa, trang, kichThuoc);
-    String status = trangThai == null ? "" : trangThai;
-    if (!Set.of("", "CHO_DUYET", "DA_DUYET", "TU_CHOI").contains(status))
-      throw new InvalidRequestException("Trạng thái duyệt không hợp lệ");
-    long total = dao.demYeuCau(k, status);
+    long total = dao.demYeuCau(k, "");
     return new PageResponse<>(
-        dao.timYeuCau(k, status, kichThuoc, (long) trang * kichThuoc),
+        dao.timYeuCau(k, "", kichThuoc, (long) trang * kichThuoc),
         trang,
         kichThuoc,
         total,

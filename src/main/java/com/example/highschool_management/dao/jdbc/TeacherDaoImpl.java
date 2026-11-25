@@ -146,7 +146,7 @@ public class TeacherDaoImpl implements TeacherDao {
       return false;
     }
     String sql =
-        "DELETE FROM GIAO_VIEN WHERE MaGV IN ("
+        "DELETE FROM giao_vien WHERE MaGV IN ("
             + String.join(",", Collections.nCopies(maGV.size(), "?"))
             + ")";
     try (Connection conn = JdbcConnect.getConnection();
@@ -166,7 +166,7 @@ public class TeacherDaoImpl implements TeacherDao {
       return Collections.emptyList();
     }
     String sql =
-        "SELECT MaGV FROM GIAO_VIEN WHERE MaGV IN ("
+        "SELECT MaGV FROM giao_vien WHERE MaGV IN ("
             + String.join(",", Collections.nCopies(maGV.size(), "?"))
             + ")";
     List<Long> existingIds = new ArrayList<>();

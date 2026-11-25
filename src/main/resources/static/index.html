@@ -255,8 +255,8 @@
           <div class="page-heading">
             <div>
               <div class="eyebrow">XẾP LỚP & ĐIỀU CHUYỂN</div>
-              <h1>Yêu cầu & phê duyệt</h1>
-              <p>Mỗi thay đổi được xem xét trước khi có hiệu lực.</p>
+              <h1>Danh sách xếp lớp & điều chuyển</h1>
+              <p>Quản lý phân lớp và điều chuyển học sinh.</p>
             </div>
             <div class="d-flex gap-2 flex-wrap">
               <button class="btn btn-outline-primary" id="newTransferBtn">
@@ -267,13 +267,6 @@
             </div>
           </div>
           <div class="section-card">
-            <div class="request-tabs" role="group" aria-label="Lọc yêu cầu">
-              <button class="active" data-request-status="CHO_DUYET">
-                Chờ duyệt</button
-              ><button data-request-status="DA_DUYET">Đã duyệt</button
-              ><button data-request-status="TU_CHOI">Đã từ chối</button
-              ><button data-request-status="">Tất cả</button>
-            </div>
             <form class="filter-bar" id="requestFilters">
               <label class="search-control wide-search"
                 ><span data-icon="search"></span
@@ -283,8 +276,6 @@
                   placeholder="Tìm học sinh, mã học sinh hoặc lớp…"
                   maxlength="100"
                   aria-label="Tìm yêu cầu" /></label
-              ><span class="subtle-label ms-auto"
-                >Yêu cầu chờ duyệt chưa làm thay đổi lớp hiện tại</span
               >
             </form>
             <div class="table-responsive">
@@ -292,10 +283,9 @@
                 <thead>
                   <tr>
                     <th>Học sinh</th>
-                    <th>Yêu cầu</th>
+                    <th>Hình thức</th>
                     <th>Lớp đích</th>
                     <th>Ngày hiệu lực</th>
-                    <th>Trạng thái</th>
                     <th class="text-end">Thao tác</th>
                   </tr>
                 </thead>

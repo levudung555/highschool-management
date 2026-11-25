@@ -26,6 +26,9 @@ public class SchoolClassDaoImpl implements SchoolClassDao {
         schoolClass.setMaKhoi(rs.getLong("MaKhoi"));
         schoolClass.setTenLop(rs.getString("TenLop"));
         schoolClass.setTrangThai(rs.getString("TrangThai"));
+        schoolClass.setMaToHop(rs.getObject("MaToHop", Long.class));
+        schoolClass.setSiSoToiDa(rs.getObject("SiSoToiDa", Integer.class));
+        schoolClass.setThuTuXep(rs.getObject("ThuTuXep", Integer.class));
         return schoolClass;
       };
 
@@ -62,7 +65,7 @@ public class SchoolClassDaoImpl implements SchoolClassDao {
 
   @Override
   public Long themLop(SchoolClass schoolClass) {
-    String sql = "Insert into lop_hoc (MaNH, MaKhoi, TenLop, TrangThai) values (?, ?, ?, ?)";
+    String sql = "Insert into lop_hoc (MaNH, MaKhoi, TenLop, TrangThai, MaToHop, SiSoToiDa, ThuTuXep) values (?, ?, ?, ?, ?, ?, ?)";
     var keyHolder = new GeneratedKeyHolder();
 
     int soDong =
@@ -73,6 +76,9 @@ public class SchoolClassDaoImpl implements SchoolClassDao {
               ps.setLong(2, schoolClass.getMaKhoi());
               ps.setString(3, schoolClass.getTenLop());
               ps.setString(4, schoolClass.getTrangThai());
+              ps.setObject(5, schoolClass.getMaToHop());
+              ps.setObject(6, schoolClass.getSiSoToiDa());
+              ps.setObject(7, schoolClass.getThuTuXep());
               return ps;
             },
             keyHolder);
@@ -103,7 +109,7 @@ public class SchoolClassDaoImpl implements SchoolClassDao {
         """
         UPDATE lop_hoc
         SET TenLop = ?,
-            TrangThai = ?
+            TrangThai = ?, MaToHop = ?, SiSoToiDa = ?, ThuTuXep = ?
         WHERE MaLop = ?
         """;
 
@@ -113,7 +119,10 @@ public class SchoolClassDaoImpl implements SchoolClassDao {
           ps.setString(1, lop.getTenLop());
 
           ps.setString(2, lop.getTrangThai());
-          ps.setLong(3, lop.getMaLop());
+          ps.setObject(3, lop.getMaToHop());
+          ps.setObject(4, lop.getSiSoToiDa());
+          ps.setObject(5, lop.getThuTuXep());
+          ps.setLong(6, lop.getMaLop());
         });
   }
 
@@ -153,7 +162,7 @@ public class SchoolClassDaoImpl implements SchoolClassDao {
     return jdbcTemplate.update(sql, maLop);
   }
 
-  private static final String YEAR_LABEL = "CONCAT(YEAR(n.NgayBatDau), '-', YEAR(n.NgayKetThuc))";
+  private static final String YEAR_LABEL = "n.MaSoNH";
   private static final String CLASS_FILTER =
       """
       WHERE LOCATE(?,l.TenLop)>0 AND (? IS NULL OR l.MaNH=?)
@@ -204,24 +213,19 @@ public class SchoolClassDaoImpl implements SchoolClassDao {
                 lop.MaNH,
                 lop.MaKhoi,
                 lop.TenLop,
-                CONCAT(
-                    YEAR(namHoc.NgayBatDau),
-                    '-',
-                    YEAR(namHoc.NgayKetThuc)
-                ) AS NamHoc,
+                namHoc.MaSoNH AS NamHoc,
                 khoi.SoKhoi,
                 lop.TrangThai,
 
-                -- Đếm học sinh đã duyệt, còn thuộc lớp tại ngày được chọn
+                -- Đếm học sinh còn thuộc lớp tại ngày được chọn
                 (
                     SELECT COUNT(DISTINCT xepLop.MaHS)
                     FROM xep_lop xepLop
                     WHERE xepLop.MaLop = lop.MaLop
-                      AND xepLop.TrangThaiDuyet = 'DA_DUYET'
                       AND xepLop.TuNgay <= ?
                       AND (
                           xepLop.DenNgay IS NULL
-                          OR xepLop.DenNgay > ?
+                          OR xepLop.DenNgay >= ?
                       )
                 ) AS SiSo
 

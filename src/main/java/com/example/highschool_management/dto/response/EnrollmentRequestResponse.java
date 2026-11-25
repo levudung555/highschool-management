@@ -13,6 +13,5 @@ public record EnrollmentRequestResponse(
     String namHoc,
     LocalDate tuNgay,
     LocalDate denNgay,
-    String trangThaiDuyet,
     Long maXepLopNguon,
     String lyDoChuyen) {}

@@ -23,11 +23,9 @@ public interface EnrollmentDao {
 
   long taoChoDuyet(Enrollment e);
 
-  void luuYeuCauChuyen(Long maXepLopDich, Long maXepLopNguon, String lyDo);
+  void luuYeuCauChuyen(Long maXepLopDich, Long maXepLopNguon, String lyDo, long actor);
 
   void ketThuc(Long maXepLop, LocalDate denNgay, String lyDo);
-
-  void quyetDinh(Long maXepLop, String trangThai, long nguoiDuyet, LocalDateTime lucDuyet);
 
   long demSiSo(Long maLop, LocalDate ngay);
 

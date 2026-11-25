@@ -131,13 +131,13 @@ async function loadHome() {
       request("/student"),
       request("/teacher"),
       request("/api/v1/classes?kichThuoc=1"),
-      request("/api/v1/enrollments?trangThai=CHO_DUYET&kichThuoc=1"),
+      request("/api/v1/enrollments?kichThuoc=1"),
     ]);
     const cards = [
       ["Học sinh", students.length, "students", "users"],
       ["Giáo viên", teachers.length, "teachers", "building"],
       ["Lớp học", classes.tongSoPhanTu, "classes", "grid"],
-      ["Yêu cầu chờ duyệt", requests.tongSoPhanTu, "requests", "clock"],
+      ["Phân lớp học sinh", requests.tongSoPhanTu, "requests", "clock"],
     ];
     $("home-stats").innerHTML = cards
       .map(
@@ -213,7 +213,7 @@ function drawRows(type) {
       <td><strong>${escapeHtml(row.hoTen)}</strong></td>
       <td>${type === "guardians" ? escapeHtml(row.diaChi || "—") : formatDate(row.ngaySinh)}</td>
       <td>${escapeHtml(row.sdt || "—")}${type !== "guardians" ? `<small class="subtle-label d-block">${escapeHtml(row.email || "")}</small>` : ""}</td>
-      <td>${type === "teachers" ? `${escapeHtml(row.chuyenMon || "—")}<small class="d-block subtle-label">${escapeHtml(teacherStatus(row.trangThai))}</small>` : type === "students" ? (row.gioiTinh === "NAM" ? "Nam" : "Nữ") : escapeHtml(row.email || "—")}</td>
+      <td>${type === "teachers" ? `${escapeHtml(row.chuyenMon || "—")}<small class="d-block subtle-label">${escapeHtml(teacherStatus(row.trangThai))}</small>` : type === "students" ? ({ NAM: "Nam", NU: "Nữ", KHAC: "Khác" }[row.gioiTinh] || "—") : escapeHtml(row.email || "—")}</td>
       <td><div class="row-actions">
         <button class="btn btn-outline-primary" data-profile-action="detail" data-type="${type}" data-id="${id}">Chi tiết</button>
         <button class="btn btn-light" data-profile-action="edit" data-type="${type}" data-id="${id}" aria-label="Sửa ${escapeHtml(row.hoTen)}">Sửa</button>

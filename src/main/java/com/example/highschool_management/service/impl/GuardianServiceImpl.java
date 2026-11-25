@@ -59,7 +59,7 @@ public class GuardianServiceImpl implements GuardianService {
                     new com.example.highschool_management.exception.BusinessException(
                         "Người giám hộ không tồn tại"));
 
-    if (!request.getSdt().equals(guardian.getSdt())
+    if (request.getSdt() != null && !request.getSdt().equals(guardian.getSdt())
         && guardianDao.existsSoDienThoai(request.getSdt())) {
       throw new com.example.highschool_management.exception.BusinessException(
           "Số điện thoại đã tồn tại");

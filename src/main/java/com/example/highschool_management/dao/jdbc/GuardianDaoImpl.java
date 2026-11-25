@@ -110,7 +110,7 @@ public class GuardianDaoImpl implements GuardianDao {
         if (maNGH == null || maNGH.isEmpty()) {
             return false;
         }
-        String sql = "DELETE FROM NGUOI_GIAM_HO WHERE MaNGH IN ("
+        String sql = "DELETE FROM nguoi_giam_ho WHERE MaNGH IN ("
                 + String.join(",", Collections.nCopies(maNGH.size(), "?"))
                 + ")";
         try (Connection conn = JdbcConnect.getConnection();
@@ -129,7 +129,7 @@ public class GuardianDaoImpl implements GuardianDao {
         if (maNGH == null || maNGH.isEmpty()) {
             return Collections.emptyList();
         }
-        String sql = "SELECT MaNGH FROM NGUOI_GIAM_HO WHERE MaNGH IN ("
+        String sql = "SELECT MaNGH FROM nguoi_giam_ho WHERE MaNGH IN ("
                 + String.join(",", Collections.nCopies(maNGH.size(), "?"))
                 + ")";
         List<Long> existingIds = new ArrayList<>();

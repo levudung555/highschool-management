@@ -1,19 +1,14 @@
-import { login, enterApp, accessToken, authorizedFetch } from "./auth.js";
+import { login, enterApp, currentUser } from "./auth.js";
 const form = document.getElementById("loginForm");
 const error = document.getElementById("loginError");
 const button = document.getElementById("loginSubmit");
-if (accessToken()) {
+
+(async () => {
   try {
-    const response = await authorizedFetch("/api/v1/auth/me");
-    if (response.ok) enterApp();
+    const user = await currentUser();
+    if (user) enterApp();
   } catch {}
-}
-fetch("/api/v1/auth/options")
-  .then((r) => r.json())
-  .then((data) => {
-    document.getElementById("localAccounts").hidden = !data.local;
-  })
-  .catch(() => {});
+})();
 document.getElementById("togglePassword").addEventListener("click", (event) => {
   const input = document.getElementById("password");
   const shown = input.type === "password";

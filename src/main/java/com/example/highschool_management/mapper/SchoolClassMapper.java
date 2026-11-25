@@ -9,6 +9,7 @@ public class SchoolClassMapper {
 
   public SchoolClassResponse sangResponse(SchoolClass lop) {
     return new SchoolClassResponse(
-        lop.getMaLop(), lop.getMaNamHoc(), lop.getMaKhoi(), lop.getTenLop(), lop.getTrangThai());
+        lop.getMaLop(), lop.getMaNamHoc(), lop.getMaKhoi(), lop.getTenLop(), lop.getTrangThai(),
+        lop.getMaToHop(), lop.getSiSoToiDa(), lop.getThuTuXep());
   }
 }

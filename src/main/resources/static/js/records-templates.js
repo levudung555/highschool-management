@@ -10,7 +10,7 @@ export const profiles = {
     id: "maHS",
     description: "Quản lý hồ sơ, tra cứu phân lớp và kết nối người giám hộ.",
     fields: [
-      ["hoTen", "Họ và tên", "text", true, 100],
+      ["hoTen", "Họ và tên", "text", true, 150],
       ["ngaySinh", "Ngày sinh", "date", true],
       [
         "gioiTinh",
@@ -20,11 +20,12 @@ export const profiles = {
         [
           ["NAM", "Nam"],
           ["NU", "Nữ"],
+          ["KHAC", "Khác"],
         ],
       ],
       ["sdt", "Số điện thoại", "tel", false, 20],
-      ["email", "Email", "email", false, 100],
-      ["diaChi", "Địa chỉ", "text", false, 255],
+      ["email", "Email", "email", false, 254],
+      ["diaChi", "Địa chỉ", "text", false, 500],
     ],
   },
   teachers: {
@@ -37,8 +38,8 @@ export const profiles = {
       "Tra cứu giáo viên, cập nhật chuyên môn và tình trạng công tác.",
     fields: [
       ["hoTen", "Họ và tên", "text", true, 150],
-      ["ngaySinh", "Ngày sinh", "date", true],
-      ["sdt", "Số điện thoại", "tel", true, 20],
+      ["ngaySinh", "Ngày sinh", "date", false],
+      ["sdt", "Số điện thoại", "tel", false, 20],
       ["email", "Email", "email", false, 254],
       ["chuyenMon", "Chuyên môn", "text", false, 150],
       [
@@ -62,7 +63,7 @@ export const profiles = {
     description: "Thông tin liên hệ dùng chung cho hồ sơ học sinh.",
     fields: [
       ["hoTen", "Họ và tên", "text", true, 150],
-      ["sdt", "Số điện thoại", "tel", true, 20],
+      ["sdt", "Số điện thoại", "tel", false, 20],
       ["email", "Email", "email", false, 254],
       ["diaChi", "Địa chỉ", "text", false, 500],
     ],

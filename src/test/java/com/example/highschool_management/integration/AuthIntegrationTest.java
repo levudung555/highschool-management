@@ -63,6 +63,13 @@ class AuthIntegrationTest {
     }
   }
 
+  @Test
+  void faviconIsAvailableWithoutLogin() throws Exception {
+    mvc.perform(get("/favicon.ico"))
+        .andExpect(status().isOk())
+        .andExpect(result -> assertTrue(result.getResponse().getContentAsByteArray().length > 0));
+  }
+
   @BeforeEach
   void ensureSeedData() {
     Role adminRole =

@@ -9,6 +9,7 @@ import java.time.LocalDate;
 import java.util.List;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
@@ -26,38 +27,45 @@ public class EnrollmentController {
   }
 
   @PostMapping("/enrollments")
+  @PreAuthorize("hasAnyRole('ADMIN', 'BGH', 'GIAO_VU')")
   public ResponseEntity<EnrollmentResponse> xepLop(
       @Valid @RequestBody EnrollStudentRequest request) {
     return created(service.xepLop(request));
   }
 
   @PostMapping("/enrollments/transfers")
+  @PreAuthorize("hasAnyRole('ADMIN', 'BGH', 'GIAO_VU')")
   public ResponseEntity<EnrollmentResponse> chuyenLop(
       @Valid @RequestBody TransferStudentRequest request) {
     return created(service.chuyenLop(request));
   }
 
   @PutMapping("/enrollments/{id}/approval")
+  @PreAuthorize("hasAnyRole('ADMIN', 'BGH')")
   public EnrollmentResponse duyet(@PathVariable("id") Long id) {
     return service.duyet(id);
   }
 
   @PutMapping("/enrollments/{id}/rejection")
+  @PreAuthorize("hasAnyRole('ADMIN', 'BGH')")
   public EnrollmentResponse tuChoi(@PathVariable("id") Long id) {
     return service.tuChoi(id);
   }
 
   @GetMapping("/enrollments/{id}")
+  @PreAuthorize("hasAnyRole('ADMIN', 'BGH', 'GIAO_VU', 'GIAO_VIEN', 'TEACHER')")
   public EnrollmentResponse chiTiet(@PathVariable("id") Long id) {
     return service.chiTiet(id);
   }
 
   @GetMapping("/students/{id}/enrollments")
+  @PreAuthorize("hasAnyRole('ADMIN', 'BGH', 'GIAO_VU', 'GIAO_VIEN', 'TEACHER')")
   public List<EnrollmentResponse> lichSu(@PathVariable("id") Long id) {
     return service.lichSu(id);
   }
 
   @GetMapping("/classes/{id}/students")
+  @PreAuthorize("hasAnyRole('ADMIN', 'BGH', 'GIAO_VU', 'GIAO_VIEN', 'TEACHER')")
   public PageResponse<ClassStudentResponse> danhSach(
       @PathVariable("id") Long id,
       @RequestParam(name = "ngay", required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE)
@@ -68,6 +76,7 @@ public class EnrollmentController {
   }
 
   @GetMapping("/enrollments")
+  @PreAuthorize("hasAnyRole('ADMIN', 'BGH', 'GIAO_VU', 'GIAO_VIEN', 'TEACHER')")
   public PageResponse<EnrollmentRequestResponse> timYeuCau(
       @RequestParam(name = "tuKhoa", defaultValue = "") String tuKhoa,
       @RequestParam(name = "trangThai", defaultValue = "") String trangThai,
@@ -77,6 +86,7 @@ public class EnrollmentController {
   }
 
   @GetMapping("/enrollments/students")
+  @PreAuthorize("hasAnyRole('ADMIN', 'BGH', 'GIAO_VU', 'GIAO_VIEN', 'TEACHER')")
   public PageResponse<EnrollmentStudentResponse> timHocSinh(
       @RequestParam(name = "tuKhoa", defaultValue = "") String tuKhoa,
       @RequestParam(name = "trang", defaultValue = "0") int trang,

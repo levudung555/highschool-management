@@ -104,7 +104,7 @@ public class StudentGuardianDaoImpl implements StudentGuardianDao {
         if (maNGHs == null || maNGHs.isEmpty()) {
             return false;
         }
-        String sql = "DELETE FROM HS_NGUOI_GIAM_HO WHERE MaNGH IN ("
+        String sql = "DELETE FROM hs_nguoi_giam_ho WHERE MaNGH IN ("
                 + String.join(",", Collections.nCopies(maNGHs.size(), "?"))
                 + ")";
         try (Connection conn = JdbcConnect.getConnection();
@@ -123,7 +123,7 @@ public class StudentGuardianDaoImpl implements StudentGuardianDao {
         if (maHSs == null || maHSs.isEmpty()) {
             return false;
         }
-        String sql = "DELETE FROM HS_NGUOI_GIAM_HO WHERE MaHS IN ("
+        String sql = "DELETE FROM hs_nguoi_giam_ho WHERE MaHS IN ("
                 + String.join(",", Collections.nCopies(maHSs.size(), "?"))
                 + ")";
         try (Connection conn = JdbcConnect.getConnection();

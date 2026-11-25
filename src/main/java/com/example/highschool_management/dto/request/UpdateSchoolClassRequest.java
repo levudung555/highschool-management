@@ -10,4 +10,7 @@ public record UpdateSchoolClassRequest(
         @Pattern(
             regexp = "HOAT_DONG|NGUNG_HOAT_DONG",
             message = "Trạng thái phải là 'HOAT_DONG' hoặc 'NGUNG_HOAT_DONG'")
-        String trangThai) {}
+        String trangThai,
+    @Positive Long maToHop,
+    @Positive @Max(65535) Integer siSoToiDa,
+    @Positive @Max(65535) Integer thuTuXep) {}

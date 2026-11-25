@@ -11,4 +11,11 @@ public record CreateSchoolClassRequest(
         Long maKhoi,
     @NotBlank(message = "Tên lớp không được để trống")
         @Size(max = 30, message = "Tên lớp không được vượt quá 30 ký tự")
-        String tenLop) {}
+        String tenLop,
+    @Positive Long maToHop,
+    @Positive @Max(65535) Integer siSoToiDa,
+    @Positive @Max(65535) Integer thuTuXep) {
+  public CreateSchoolClassRequest(Long maNamHoc, Long maKhoi, String tenLop) {
+    this(maNamHoc, maKhoi, tenLop, null, null, null);
+  }
+}

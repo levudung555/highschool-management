@@ -10,6 +10,7 @@ import com.example.highschool_management.service.SchoolClassService;
 import jakarta.validation.Valid;
 import java.net.URI;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
@@ -22,11 +23,13 @@ public class SchoolClassController {
   }
 
   @GetMapping("/{maLop}")
+  @PreAuthorize("hasAnyRole('ADMIN', 'BGH', 'GIAO_VU', 'GIAO_VIEN', 'TEACHER')")
   public SchoolClassResponse getSchoolClass(@PathVariable("maLop") Long maLop) {
     return schoolClassService.getSchoolClassById(maLop);
   }
 
   @PostMapping
+  @PreAuthorize("hasAnyRole('ADMIN', 'BGH', 'GIAO_VU')")
   public ResponseEntity<SchoolClassResponse> them(
       @Valid @RequestBody CreateSchoolClassRequest request) {
     var ketQua = schoolClassService.them(request);
@@ -35,6 +38,7 @@ public class SchoolClassController {
   }
 
   @GetMapping
+  @PreAuthorize("hasAnyRole('ADMIN', 'BGH', 'GIAO_VU', 'GIAO_VIEN', 'TEACHER')")
   public PageResponse<SchoolClassListResponse> timDanhSach(
       @RequestParam(name = "tuKhoa", defaultValue = "") String tuKhoa,
       @RequestParam(name = "maNamHoc", required = false) Long maNamHoc,
@@ -46,12 +50,14 @@ public class SchoolClassController {
   }
 
   @PutMapping("/{maLop}")
+  @PreAuthorize("hasAnyRole('ADMIN', 'BGH', 'GIAO_VU')")
   public SchoolClassResponse capNhat(
       @PathVariable("maLop") Long maLop, @Valid @RequestBody UpdateSchoolClassRequest request) {
     return schoolClassService.capNhat(maLop, request);
   }
 
   @DeleteMapping("/{maLop}")
+  @PreAuthorize("hasAnyRole('ADMIN', 'BGH', 'GIAO_VU')")
   public ResponseEntity<Void> xoa(@PathVariable("maLop") Long maLop) {
     schoolClassService.xoaTheoMa(maLop);
 
@@ -59,6 +65,7 @@ public class SchoolClassController {
   }
 
   @GetMapping("/catalog")
+  @PreAuthorize("hasAnyRole('ADMIN', 'BGH', 'GIAO_VU', 'GIAO_VIEN', 'TEACHER')")
   public ClassCatalogResponse danhMuc() {
     return schoolClassService.danhMuc();
   }

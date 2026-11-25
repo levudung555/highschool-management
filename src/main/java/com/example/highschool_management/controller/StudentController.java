@@ -9,6 +9,7 @@ import java.util.List;
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
 import lombok.experimental.FieldDefaults;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
@@ -20,17 +21,20 @@ public class StudentController {
   StudentService studentService;
 
   @PostMapping
+  @PreAuthorize("hasAnyRole('ADMIN', 'BGH', 'GIAO_VU')")
   public StudentResponse createUser(@RequestBody @Valid CreateStudentRequest request) {
     return studentService.createStudent(request);
   }
 
   @PutMapping("/{maHS}")
+  @PreAuthorize("hasAnyRole('ADMIN', 'BGH', 'GIAO_VU')")
   public StudentResponse updateUser(
       @PathVariable Long maHS, @RequestBody @Valid UpdateStudentRequest request) {
     return studentService.updateStudent(maHS, request);
   }
 
   @GetMapping("/search")
+  @PreAuthorize("hasAnyRole('ADMIN', 'BGH', 'GIAO_VU', 'GIAO_VIEN', 'TEACHER')")
   public List<StudentResponse> searchStudents(
       @RequestParam(required = false) String maSoHS,
       @RequestParam(required = false) String hoTen,
@@ -41,11 +45,13 @@ public class StudentController {
   }
 
   @GetMapping
+  @PreAuthorize("hasAnyRole('ADMIN', 'BGH', 'GIAO_VU', 'GIAO_VIEN', 'TEACHER')")
   public List<StudentResponse> getAllStudents() {
     return studentService.getAllStudents();
   }
 
   @DeleteMapping
+  @PreAuthorize("hasAnyRole('ADMIN', 'BGH', 'GIAO_VU')")
   public boolean deleteStudent(@RequestParam List<Long> maHS) {
     return studentService.deleteStudent(maHS);
   }

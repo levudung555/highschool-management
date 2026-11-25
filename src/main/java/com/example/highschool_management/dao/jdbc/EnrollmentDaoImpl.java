@@ -21,11 +21,15 @@ public class EnrollmentDaoImpl implements EnrollmentDao {
     this.jdbc = jdbc;
   }
 
-  private static final String SELECT =
-      """
-      SELECT x.*, y.MaXLNguon, y.LyDo FROM xep_lop x
-      LEFT JOIN yeu_cau_chuyen_lop y ON y.MaXLDich = x.MaXL
+  private static final String TRANSFER_JOIN = """
+      LEFT JOIN nhat_ky_he_thong y ON y.LoaiDoiTuong = 'XEP_LOP'
+        AND y.HanhDong = 'CHUYEN_LOP' AND y.MaDoiTuong = CAST(x.MaXL AS CHAR)
       """;
+  private static final String TRANSFER_FIELDS =
+      "CAST(JSON_UNQUOTE(JSON_EXTRACT(y.DuLieuSau, '$.MaXLNguon')) AS SIGNED) AS MaXLNguon, "
+          + "JSON_UNQUOTE(JSON_EXTRACT(y.DuLieuSau, '$.LyDo')) AS LyDo";
+  private static final String SELECT =
+      "SELECT x.*, " + TRANSFER_FIELDS + " FROM xep_lop x " + TRANSFER_JOIN;
   private static final RowMapper<Enrollment> MAPPER =
       (rs, row) -> {
         var e = new Enrollment();
@@ -35,11 +39,11 @@ public class EnrollmentDaoImpl implements EnrollmentDao {
         e.setTuNgay(rs.getObject("TuNgay", LocalDate.class));
         e.setDenNgay(rs.getObject("DenNgay", LocalDate.class));
         e.setLyDoKetThuc(rs.getString("LyDoKetThuc"));
-        e.setTrangThaiDuyet(rs.getString("TrangThaiDuyet"));
-        e.setMaTaiKhoanDuyet(rs.getObject("MaTKDuyet", Long.class));
-        e.setDuyetLuc(rs.getObject("DuyetLuc", LocalDateTime.class));
+        e.setMaTKNguoiThucHien(rs.getObject("MaTKNguoiThucHien", Long.class));
+        e.setThoiDiemThucHien(rs.getObject("ThoiDiemThucHien", LocalDateTime.class));
         e.setMaXepLopNguon(rs.getObject("MaXLNguon", Long.class));
         e.setLyDoChuyen(rs.getString("LyDo"));
+        e.setMaHoSoNhapHoc(rs.getObject("MaHoSoNhapHoc", Long.class));
         return e;
       };
 
@@ -78,10 +82,9 @@ public class EnrollmentDaoImpl implements EnrollmentDao {
         jdbc.queryForObject(
             """
             SELECT COUNT(*) FROM xep_lop WHERE MaHS = ?
-            AND TrangThaiDuyet IN ('CHO_DUYET','DA_DUYET')
             AND (? IS NULL OR MaXL <> ?) AND (? IS NULL OR MaXL <> ?)
-            AND (DenNgay IS NULL OR DenNgay > ?)
-            AND (? IS NULL OR TuNgay < ?)
+            AND (DenNgay IS NULL OR DenNgay >= ?)
+            AND (? IS NULL OR TuNgay <= ?)
             """,
             Long.class,
             hs,
@@ -103,14 +106,16 @@ public class EnrollmentDaoImpl implements EnrollmentDao {
           var ps =
               c.prepareStatement(
                   """
-                  INSERT INTO xep_lop (MaHS, MaLop, TuNgay, DenNgay, TrangThaiDuyet)
-                  VALUES (?, ?, ?, ?, 'CHO_DUYET')
+                  INSERT INTO xep_lop (MaHS, MaLop, TuNgay, DenNgay, MaTKNguoiThucHien, ThoiDiemThucHien)
+                  VALUES (?, ?, ?, ?, ?, ?)
                   """,
                   Statement.RETURN_GENERATED_KEYS);
           ps.setLong(1, e.getMaHocSinh());
           ps.setLong(2, e.getMaLop());
           ps.setObject(3, e.getTuNgay());
           ps.setObject(4, e.getDenNgay(), java.sql.Types.DATE);
+          ps.setLong(5, e.getMaTKNguoiThucHien());
+          ps.setObject(6, e.getThoiDiemThucHien());
           return ps;
         },
         key);
@@ -118,9 +123,13 @@ public class EnrollmentDaoImpl implements EnrollmentDao {
   }
 
   @Override
-  public void luuYeuCauChuyen(Long target, Long source, String reason) {
+  public void luuYeuCauChuyen(Long target, Long source, String reason, long actor) {
     jdbc.update(
-        "INSERT INTO yeu_cau_chuyen_lop (MaXLDich, MaXLNguon, LyDo) VALUES (?, ?, ?)",
+        """
+        INSERT INTO nhat_ky_he_thong (MaTK, HanhDong, LoaiDoiTuong, MaDoiTuong, DuLieuSau)
+        VALUES (?, 'CHUYEN_LOP', 'XEP_LOP', ?, JSON_OBJECT('MaXLNguon', ?, 'LyDo', ?))
+        """,
+        actor,
         target,
         source,
         reason);
@@ -132,27 +141,12 @@ public class EnrollmentDaoImpl implements EnrollmentDao {
   }
 
   @Override
-  public void quyetDinh(Long id, String status, long actor, LocalDateTime at) {
-    int changed =
-        jdbc.update(
-            """
-            UPDATE xep_lop SET TrangThaiDuyet = ?, MaTKDuyet = ?, DuyetLuc = ?
-            WHERE MaXL = ? AND TrangThaiDuyet = 'CHO_DUYET'
-            """,
-            status,
-            actor,
-            at,
-            id);
-    if (changed != 1) throw new IllegalStateException("Trạng thái yêu cầu đã thay đổi");
-  }
-
-  @Override
   public long demSiSo(Long id, LocalDate day) {
     return Objects.requireNonNull(
         jdbc.queryForObject(
             """
-            SELECT COUNT(DISTINCT MaHS) FROM xep_lop WHERE MaLop = ? AND TrangThaiDuyet = 'DA_DUYET'
-            AND TuNgay <= ? AND (DenNgay IS NULL OR DenNgay > ?)
+            SELECT COUNT(DISTINCT MaHS) FROM xep_lop WHERE MaLop = ?
+            AND TuNgay <= ? AND (DenNgay IS NULL OR DenNgay >= ?)
             """,
             Long.class,
             id,
@@ -171,8 +165,8 @@ public class EnrollmentDaoImpl implements EnrollmentDao {
         """
         SELECT x.MaXL, h.MaHS, h.MaSoHS, h.HoTen, h.NgaySinh, x.TuNgay, x.DenNgay
         FROM xep_lop x JOIN hoc_sinh h ON h.MaHS = x.MaHS
-        WHERE x.MaLop = ? AND x.TrangThaiDuyet = 'DA_DUYET'
-        AND x.TuNgay <= ? AND (x.DenNgay IS NULL OR x.DenNgay > ?)
+        WHERE x.MaLop = ?
+        AND x.TuNgay <= ? AND (x.DenNgay IS NULL OR x.DenNgay >= ?)
         ORDER BY h.MaHS, x.MaXL LIMIT ? OFFSET ?
         """,
         (r, n) ->
@@ -191,14 +185,13 @@ public class EnrollmentDaoImpl implements EnrollmentDao {
         offset);
   }
 
-  private static final String YEAR_LABEL = "CONCAT(YEAR(n.NgayBatDau), '-', YEAR(n.NgayKetThuc))";
+  private static final String YEAR_LABEL = "n.MaSoNH";
   private static final String REQUEST_FROM =
       """
       FROM xep_lop x JOIN hoc_sinh h ON h.MaHS=x.MaHS
       JOIN lop_hoc l ON l.MaLop=x.MaLop JOIN nam_hoc n ON n.MaNH=l.MaNH
-      LEFT JOIN yeu_cau_chuyen_lop y ON y.MaXLDich=x.MaXL
-      WHERE (?='' OR x.TrangThaiDuyet=?)
-      AND (LOCATE(?,h.HoTen)>0 OR LOCATE(?,h.MaSoHS)>0 OR LOCATE(?,l.TenLop)>0)
+      """ + TRANSFER_JOIN + """
+      WHERE (LOCATE(?,h.HoTen)>0 OR LOCATE(?,h.MaSoHS)>0 OR LOCATE(?,l.TenLop)>0)
       """;
 
   @Override
@@ -228,7 +221,7 @@ public class EnrollmentDaoImpl implements EnrollmentDao {
   @Override
   public long demYeuCau(String k, String s) {
     return Objects.requireNonNull(
-        jdbc.queryForObject("SELECT COUNT(*) " + REQUEST_FROM, Long.class, s, s, k, k, k));
+        jdbc.queryForObject("SELECT COUNT(*) " + REQUEST_FROM, Long.class, k, k, k));
   }
 
   @Override
@@ -236,7 +229,7 @@ public class EnrollmentDaoImpl implements EnrollmentDao {
     return jdbc.query(
         "SELECT x.MaXL,x.MaHS,h.MaSoHS,h.HoTen,x.MaLop,l.TenLop,"
             + YEAR_LABEL
-            + ",x.TuNgay,x.DenNgay,x.TrangThaiDuyet,y.MaXLNguon,y.LyDo "
+            + ",x.TuNgay,x.DenNgay," + TRANSFER_FIELDS + " "
             + REQUEST_FROM
             + " ORDER BY x.MaXL DESC LIMIT ? OFFSET ?",
         (r, i) ->
@@ -250,11 +243,8 @@ public class EnrollmentDaoImpl implements EnrollmentDao {
                 r.getString(7),
                 r.getObject(8, LocalDate.class),
                 r.getObject(9, LocalDate.class),
-                r.getString(10),
-                r.getObject(11, Long.class),
-                r.getString(12)),
-        s,
-        s,
+                r.getObject(10, Long.class),
+                r.getString(11)),
         k,
         k,
         k,

@@ -71,6 +71,9 @@ public class SchoolClassServiceImpl implements SchoolClassService {
     lop.setMaKhoi(request.maKhoi());
     lop.setMaNamHoc(request.maNamHoc());
     lop.setTenLop(tenLop);
+    lop.setMaToHop(request.maToHop());
+    lop.setSiSoToiDa(request.siSoToiDa());
+    lop.setThuTuXep(request.thuTuXep());
     lop.setTrangThai("HOAT_DONG");
     Long maLop;
     try {
@@ -132,6 +135,9 @@ public class SchoolClassServiceImpl implements SchoolClassService {
     }
 
     lop.setTenLop(tenLop);
+    if (request.maToHop() != null) lop.setMaToHop(request.maToHop());
+    if (request.siSoToiDa() != null) lop.setSiSoToiDa(request.siSoToiDa());
+    if (request.thuTuXep() != null) lop.setThuTuXep(request.thuTuXep());
     lop.setTrangThai(request.trangThai());
 
     try {

@@ -3,16 +3,19 @@ package com.example.highschool_management.model;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 
+@lombok.Getter
+@lombok.Setter
 public class Enrollment {
+  private Long maHoSoNhapHoc;
+
   private Long maXepLop;
   private Long maHocSinh;
   private Long maLop;
   private LocalDate tuNgay;
   private LocalDate denNgay;
   private String lyDoKetThuc;
-  private String trangThaiDuyet;
-  private Long maTaiKhoanDuyet;
-  private LocalDateTime duyetLuc;
+  private Long maTKNguoiThucHien;
+  private LocalDateTime thoiDiemThucHien;
   private Long maXepLopNguon;
   private String lyDoChuyen;
 
@@ -64,28 +67,20 @@ public class Enrollment {
     this.lyDoKetThuc = lyDoKetThuc;
   }
 
-  public String getTrangThaiDuyet() {
-    return trangThaiDuyet;
+  public Long getMaTKNguoiThucHien() {
+    return maTKNguoiThucHien;
   }
 
-  public void setTrangThaiDuyet(String trangThaiDuyet) {
-    this.trangThaiDuyet = trangThaiDuyet;
+  public void setMaTKNguoiThucHien(Long maTKNguoiThucHien) {
+    this.maTKNguoiThucHien = maTKNguoiThucHien;
   }
 
-  public Long getMaTaiKhoanDuyet() {
-    return maTaiKhoanDuyet;
+  public LocalDateTime getThoiDiemThucHien() {
+    return thoiDiemThucHien;
   }
 
-  public void setMaTaiKhoanDuyet(Long maTaiKhoanDuyet) {
-    this.maTaiKhoanDuyet = maTaiKhoanDuyet;
-  }
-
-  public LocalDateTime getDuyetLuc() {
-    return duyetLuc;
-  }
-
-  public void setDuyetLuc(LocalDateTime duyetLuc) {
-    this.duyetLuc = duyetLuc;
+  public void setThoiDiemThucHien(LocalDateTime thoiDiemThucHien) {
+    this.thoiDiemThucHien = thoiDiemThucHien;
   }
 
   public Long getMaXepLopNguon() {
