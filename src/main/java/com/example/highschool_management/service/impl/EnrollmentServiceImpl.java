@@ -3,6 +3,7 @@ package com.example.highschool_management.service.impl;
 import com.example.highschool_management.dao.EnrollmentDao;
 import com.example.highschool_management.dao.SchoolClassDao;
 import com.example.highschool_management.dto.request.*;
+import com.example.highschool_management.dto.request.ConfirmGrade10PlacementRequest.PlacementAdjustment;
 import com.example.highschool_management.dto.response.*;
 import com.example.highschool_management.exception.*;
 import com.example.highschool_management.mapper.EnrollmentMapper;
@@ -147,7 +148,7 @@ public class EnrollmentServiceImpl implements EnrollmentService {
                 danhSachHocSinhCuaLop.add(danhSachHocSinh.get(viTriHocSinh));
                 viTriHocSinh++;
             }
-            ketQua.add(new Grade10ClassPreviewResponse(lop.getMaLop(), lop.getTenLop(), danhSachHocSinhCuaLop));
+            ketQua.add(new Grade10ClassPreviewResponse(lop.getMaLop(), lop.getTenLop(), lop.getSiSoToiDa(), danhSachHocSinhCuaLop));
         }
         return ketQua;
     }
@@ -201,14 +202,8 @@ public class EnrollmentServiceImpl implements EnrollmentService {
                 noiDung.append("LOP|").append(lop.maLop()).append('\n');
 
                 for (var hocSinh : lop.danhSachHocSinh()) {
-                    String diem = hocSinh.tongDiemDauVao()
-                            .stripTrailingZeros()
-                            .toPlainString();
-
-                    noiDung.append("HOC_SINH|")
-                            .append(hocSinh.maHoSoNhapHoc()).append('|')
-                            .append(hocSinh.maHocSinh()).append('|')
-                            .append(diem).append('\n');
+                    String diem = hocSinh.tongDiemDauVao().stripTrailingZeros().toPlainString();
+                    noiDung.append("HOC_SINH|").append(hocSinh.maHoSoNhapHoc()).append('|').append(hocSinh.maHocSinh()).append('|').append(diem).append('\n');
                 }
             }
         }
@@ -246,6 +241,7 @@ public class EnrollmentServiceImpl implements EnrollmentService {
 
         //lặp lại phương án và so với mã người dùng gửi
         Grade10PlacementPreviewResponse phuongAn = kiemTraPhuongAnTruocKhiChot(yeuCau);
+        var dieuChinhTheoHoSo = kiemTraDieuChinh(phuongAn, yeuCau.danhSachDieuChinh());
 
         //lưu đợt chốt xếp lớp 10
         enrollmentDao.luuDotChotXepLop10(maNamHoc, maTaiKhoan, ngayVaoLop, thoiDiemChot.atStartOfDay(), phuongAn.maKiemTraPhuongAn());
@@ -263,7 +259,8 @@ public class EnrollmentServiceImpl implements EnrollmentService {
                     }
                     Enrollment en = new Enrollment();
                     en.setMaHocSinh(hocSinh.maHocSinh());
-                    en.setMaLop(lop.maLop());
+                    var dieuChinh = dieuChinhTheoHoSo.get(hocSinh.maHoSoNhapHoc());
+                    en.setMaLop(dieuChinh == null ? lop.maLop() : dieuChinh.maLopDich());
                     en.setTuNgay(ngayVaoLop);
                     en.setDenNgay(null);
                     en.setLyDoKetThuc(null);
@@ -276,6 +273,44 @@ public class EnrollmentServiceImpl implements EnrollmentService {
             }
         }
         return soHocSinhDaXep;
+    }
+
+    // Đối chiếu từng yêu cầu với bản xếp thử, sau đó kiểm tra sĩ số cuối cùng của từng lớp.
+    private Map<Long, PlacementAdjustment> kiemTraDieuChinh(
+            Grade10PlacementPreviewResponse phuongAn, List<PlacementAdjustment> dieuChinh) {
+        Map<Long, PlacementAdjustment> theoHoSo = new HashMap<>();
+        if (dieuChinh.isEmpty()) return theoHoSo;
+
+        Map<Long, Long> lopGocTheoHoSo = new HashMap<>();
+        Map<Long, Long> toHopTheoLop = new HashMap<>();
+        Map<Long, Integer> siSo = new HashMap<>();
+        for (var toHop : phuongAn.danhSachToHop()) {
+            for (var lop : toHop.danhSachLop()) {
+                toHopTheoLop.put(lop.maLop(), toHop.maToHop());
+                siSo.put(lop.maLop(), lop.danhSachHocSinh().size());
+                for (var hocSinh : lop.danhSachHocSinh()) {
+                    lopGocTheoHoSo.put(hocSinh.maHoSoNhapHoc(), lop.maLop());
+                }
+            }
+        }
+        for (var muc : dieuChinh) {
+            Long nguon = lopGocTheoHoSo.get(muc.maHoSoNhapHoc());
+            Long dich = muc.maLopDich();
+            if (nguon == null) throw new BusinessException("Hồ sơ điều chỉnh không thuộc đợt xếp lớp");
+            if (theoHoSo.putIfAbsent(muc.maHoSoNhapHoc(), muc) != null)
+                throw new BusinessException("Một hồ sơ xuất hiện nhiều lần trong danh sách điều chỉnh");
+            if (nguon.equals(dich) || !toHopTheoLop.get(nguon).equals(toHopTheoLop.get(dich)))
+                throw new BusinessException("Hãy chọn một lớp khác trong cùng tổ hợp");
+            siSo.merge(nguon, -1, Integer::sum);
+            siSo.merge(dich, 1, Integer::sum);
+        }
+        for (var toHop : phuongAn.danhSachToHop()) {
+            for (var lop : toHop.danhSachLop()) {
+                if (siSo.get(lop.maLop()) > lop.siSoToiDa())
+                    throw new BusinessException("Điều chỉnh vượt sĩ số tối đa của lớp " + lop.tenLop());
+            }
+        }
+        return theoHoSo;
     }
 
     // Tính lại phương án từ dữ liệu hiện tại rồi đối chiếu với mã của bản giáo vụ đã xem.

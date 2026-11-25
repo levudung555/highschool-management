@@ -11,6 +11,8 @@ let proposals = [];
 let preparedClasses = [];
 let existingNames = new Set();
 let preview;
+let adjustments = new Map();
+const undoHistory = [];
 
 // Disable the whole panel while a request runs to prevent double submission.
 async function run(action) {
@@ -35,6 +37,8 @@ function showMessage(message = "", kind = "info") {
 
 function resetPreview() {
   preview = null;
+  adjustments.clear();
+  undoHistory.length = 0;
   field("review").hidden = true;
   field("rosters").replaceChildren();
 }
@@ -242,16 +246,80 @@ async function openClasses() {
   showMessage("Đã xác nhận tạo lớp.", "success");
 }
 
-function rosterMarkup(lop) {
-  const students = lop.danhSachHocSinh;
+function rosterMarkup(lop, students, destinations) {
   const rows = students.map((student) =>
-    "<tr><td>" + escapeHtml(student.maSoHocSinh) + "</td><td>" + escapeHtml(student.hoTen) +
+    '<tr><td><input type="checkbox" data-student="' + student.maHoSoNhapHoc +
+    '" aria-label="Chọn ' + escapeHtml(student.hoTen) + '"></td><td>' + escapeHtml(student.maSoHocSinh) + "</td><td>" + escapeHtml(student.hoTen) +
+    (adjustments.has(student.maHoSoNhapHoc) ? ' <small class="text-secondary">(đã điều chỉnh)</small>' : "") +
     "</td><td>" + escapeHtml(student.tongDiemDauVao) + "</td></tr>").join("");
-  return "<details><summary>" + escapeHtml(lop.tenLop) + " <small>" + students.length + " học sinh</small></summary>" +
+  const options = destinations.map(({ target, seats }) =>
+    '<option value="' + target.maLop + '"' + (seats <= 0 ? " disabled" : "") + ">" +
+    escapeHtml(target.tenLop) + " · còn " + seats + " chỗ</option>").join("");
+  return '<details data-class="' + lop.maLop + '"><summary>' + escapeHtml(lop.tenLop) +
+    " <small>" + students.length + "/" + lop.siSoToiDa + " học sinh</small></summary>" +
     (rows ? '<div class="table-responsive"><table class="table"><thead><tr>' +
-      '<th scope="col">Mã học sinh</th><th scope="col">Họ tên</th><th scope="col">Điểm đầu vào</th>' +
-      "</tr></thead><tbody>" + rows + "</tbody></table></div>" : "") + "</details>";
+      '<th scope="col">Chọn</th><th scope="col">Mã học sinh</th><th scope="col">Họ tên</th><th scope="col">Điểm đầu vào</th>' +
+      "</tr></thead><tbody>" + rows + "</tbody></table></div>" : "") +
+    (students.length && options ? '<form class="grade10-adjust p-3 d-flex flex-wrap align-items-end gap-2">' +
+      '<label>Lớp đích<select class="form-select" name="destination" required><option value="">Chọn lớp</option>' + options + '</select></label>' +
+      '<button class="btn btn-outline-primary">Đổi lớp dự kiến</button></form>' : "") + "</details>";
 }
+
+// Luôn dựng danh sách từ bản xem trước gốc để có thể hoàn tác trước khi chốt.
+function renderRosters() {
+  const expanded = [...field("rosters").querySelectorAll("details[open]")].map(row => row.dataset.class);
+  field("rosters").innerHTML = preview.danhSachToHop.map(group => {
+    const byClass = new Map(group.danhSachLop.map(lop => [lop.maLop, []]));
+    for (const lop of group.danhSachLop) {
+      for (const student of lop.danhSachHocSinh) {
+        const move = adjustments.get(student.maHoSoNhapHoc);
+        byClass.get(move?.maLopDich ?? lop.maLop).push(student);
+      }
+    }
+    return "<h4 class='h6 mt-3'>" + escapeHtml(group.kyHieu) + "</h4>" +
+      group.danhSachLop.map(lop => {
+        const destinations = group.danhSachLop.filter(other => other !== lop).map(target => ({
+          target, seats: target.siSoToiDa - byClass.get(target.maLop).length
+        }));
+        return rosterMarkup(lop, byClass.get(lop.maLop), destinations);
+      }).join("");
+  }).join("");
+  for (const row of field("rosters").querySelectorAll("details")) row.open = expanded.includes(row.dataset.class);
+  if (undoHistory.length) {
+    const undo = document.createElement("button");
+    undo.type = "button";
+    undo.className = "btn btn-outline-secondary";
+    undo.textContent = "Hoàn tác lần điều chỉnh gần nhất";
+    undo.onclick = () => {
+      adjustments = undoHistory.pop();
+      showMessage();
+      renderRosters();
+    };
+    field("rosters").append(undo);
+  }
+}
+
+field("rosters").addEventListener("submit", event => {
+  event.preventDefault();
+  const form = event.target;
+  const source = form.closest("details");
+  const selected = [...source.querySelectorAll("[data-student]:checked")];
+  const maLopDich = Number(form.elements.destination.value);
+  if (!selected.length) return showMessage("Hãy chọn học sinh cần đổi lớp.", "warning");
+  const group = preview.danhSachToHop.find(g => g.danhSachLop.some(l => l.maLop === Number(source.dataset.class)));
+  const target = group.danhSachLop.find(l => l.maLop === maLopDich);
+  const targetRow = field("rosters").querySelector('details[data-class="' + maLopDich + '"]');
+  if (!target || targetRow.querySelectorAll("[data-student]").length + selected.length > target.siSoToiDa)
+    return showMessage("Lớp đích không đủ chỗ cho số học sinh đã chọn.", "warning");
+  undoHistory.push(new Map(adjustments));
+  for (const input of selected) {
+    const id = Number(input.dataset.student);
+    if (target.danhSachHocSinh.some(student => student.maHoSoNhapHoc === id)) adjustments.delete(id);
+    else adjustments.set(id, { maHoSoNhapHoc: id, maLopDich });
+  }
+  renderRosters();
+  showMessage("Đã đổi lớp dự kiến cho " + selected.length + " học sinh sang " + target.tenLop + ".", "success");
+});
 
 async function showPreview() {
   resetPreview();
@@ -260,9 +328,7 @@ async function showPreview() {
   preview = await request(batchApi + "/preview?" + query);
   field("reviewTitle").textContent = "Danh sách xếp thử";
   field("reviewInfo").textContent = "Kiểm tra danh sách từng lớp rồi chọn ngày vào lớp chung.";
-  field("rosters").innerHTML = preview.danhSachToHop.map((group) =>
-    "<h4 class='h6 mt-3'>" + escapeHtml(group.kyHieu) + "</h4>" +
-    group.danhSachLop.map(rosterMarkup).join("")).join("");
+  renderRosters();
 
   const date = field("date");
   date.min = year.batDau > catalog.homNay ? year.batDau : catalog.homNay;
@@ -286,6 +352,7 @@ async function confirmPlacement() {
     body: JSON.stringify({
       maNamHoc: preview.maNamHoc,
       maKiemTraPhuongAn: preview.maKiemTraPhuongAn,
+      danhSachDieuChinh: [...adjustments.values()],
       ngayVaoLop,
     }),
   });
